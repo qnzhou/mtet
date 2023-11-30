@@ -7,8 +7,8 @@ message(STATUS "Third-party (external): creating target 'slot_map::slot_map'")
 include(CPM)
 CPMAddPackage(
   NAME slot_map
-  GITHUB_REPOSITORY SergeyMakeev/slot_map
-  GIT_TAG 4d6c2ba92d55d4726154a290304d10aefd09a89b
+  GITHUB_REPOSITORY qnzhou/slot_map
+  GIT_TAG bc21042de3b20dd96a7d42e454669350b2b74388
   DOWNLOAD_ONLY YES
 )
 

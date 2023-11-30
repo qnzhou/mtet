@@ -4,6 +4,53 @@
 
 #include <array>
 
+void validate_mesh(const mtet::MTetMeshImpl& mesh)
+{
+    mesh.seq_foreach_tet([&](uint64_t tet_id) {
+        using VertexKey = mtet::MTetMeshImpl::VertexKey;
+        using TetKey = mtet::MTetMeshImpl::TetKey;
+        TetKey key(tet_id);
+
+        const auto& vertices = mesh.get_vertices();
+        const auto& tets = mesh.get_tets();
+        REQUIRE(tets.has_key(key));
+
+        auto ptr = tets.get(key);
+        REQUIRE(ptr != nullptr);
+
+        const auto& tet = *ptr;
+        REQUIRE(vertices.has_key(VertexKey(tet.vertices[0])));
+        REQUIRE(vertices.has_key(VertexKey(tet.vertices[1])));
+        REQUIRE(vertices.has_key(VertexKey(tet.vertices[2])));
+        REQUIRE(vertices.has_key(VertexKey(tet.vertices[3])));
+
+        auto validate_adjacency = [&](uint8_t local_index) {
+            if (tet.mirrors[local_index] == mtet::invalid_key) return;
+
+            auto key2 = TetKey(tet.mirrors[local_index]);
+            REQUIRE(tets.has_key(key2));
+            const auto& tet2 = *tets.get(key2);
+
+            uint8_t sum = 0;
+            for (uint8_t i = 0; i < 4; i++) {
+                uint8_t j = mtet::get_tag(key2, i);
+                sum += j;
+                if (i != local_index) {
+                    REQUIRE(tet.vertices[i] == tet2.vertices[j]);
+                } else {
+                    REQUIRE(tet.vertices[i] != tet2.vertices[j]);
+                }
+            }
+            REQUIRE(sum == 6);
+        };
+
+        validate_adjacency(0);
+        validate_adjacency(1);
+        validate_adjacency(2);
+        validate_adjacency(3);
+    });
+}
+
 TEST_CASE("TriangleEqual", "[unordered_dense]")
 {
     std::array<uint64_t, 3> t0 = {{0, 1, 2}};
@@ -82,6 +129,46 @@ TEST_CASE("unordered_dense", "[unordered_dense]")
     REQUIRE(triangle_map[t0] == std::array<uint64_t, 2>({0, 1}));
 }
 
+TEST_CASE("slot_map", "[slot_map]")
+{
+    using TetMap = mtet::MTetMeshImpl::TetMap;
+    TetMap tet_map;
+
+    SECTION("Empty") {
+        REQUIRE(tet_map.empty());
+        REQUIRE(tet_map.size() == 0);
+        auto begin = tet_map.begin();
+        auto end = tet_map.end();
+        REQUIRE(begin == end);
+    }
+
+    SECTION("Empty2") {
+        auto key = tet_map.emplace();
+        tet_map.erase(key);
+
+        REQUIRE(tet_map.empty());
+        REQUIRE(tet_map.size() == 0);
+        auto begin = tet_map.begin();
+        auto end = tet_map.end();
+        REQUIRE(begin == end);
+    }
+
+    SECTION("Repeated add/remove")
+    {
+        auto key = tet_map.emplace(mtet::MTet());
+        REQUIRE(tet_map.has_key(key));
+
+        TetMap::key key2 = key;
+        for (size_t i = 0; i < 3000; i++) {
+            tet_map.emplace(mtet::MTet());
+            REQUIRE(tet_map.has_key(key2));
+            tet_map.erase(key2);
+            key2 = tet_map.emplace(mtet::MTet());
+            tet_map.emplace(mtet::MTet());
+        }
+    }
+}
+
 TEST_CASE("adjacency", "[mtet]")
 {
     mtet::MTetMeshImpl mesh;
@@ -136,4 +223,68 @@ TEST_CASE("adjacency", "[mtet]")
     REQUIRE(mtet::get_tag(t1_0, 1) == 3);
     REQUIRE(mtet::get_tag(t1_0, 2) == 2);
     REQUIRE(mtet::get_tag(t1_0, 3) == 1);
+
+    validate_mesh(mesh);
 }
+
+TEST_CASE("split_edge", "[mtet]")
+{
+    mtet::MTetMeshImpl mesh;
+    auto v0 = mesh.add_vertex(0, 0, 0);
+    auto v1 = mesh.add_vertex(1, 0, 0);
+    auto v2 = mesh.add_vertex(0, 1, 0);
+    auto v3 = mesh.add_vertex(0, 0, 1);
+    auto t0 = mesh.add_tet(v0, v1, v2, v3);
+    mesh.initialize_connectivity();
+
+    SECTION("case 1")
+    {
+        auto vid = mesh.split_edge(t0, 0);
+        validate_mesh(mesh);
+        REQUIRE(mesh.has_vertex(vid));
+        REQUIRE(!mesh.has_tet(t0));
+    }
+
+    SECTION("case 2")
+    {
+        auto v4 = mesh.add_vertex(1, 1, 1);
+        auto t1 = mesh.add_tet(v4, v3, v2, v1);
+        mesh.initialize_connectivity();
+        validate_mesh(mesh);
+        auto vid = mesh.split_edge(t0, 1);
+        REQUIRE(mesh.has_vertex(vid));
+        REQUIRE(mesh.get_num_tets() == 4);
+        validate_mesh(mesh);
+    }
+
+    SECTION("case 3")
+    {
+        // split in the loop.
+        mesh.seq_foreach_tet([&](uint64_t tet_id) {
+            if (mesh.has_tet(tet_id)) {
+                mesh.split_edge(mtet::MTetMeshImpl::TetKey(tet_id), 1);
+            }
+        });
+        validate_mesh(mesh);
+    }
+
+    SECTION("case 4")
+    {
+        // Repeated split
+        std::vector<uint64_t> tet_ids;
+        for (size_t i = 0; i < 10; i++) {
+            tet_ids.clear();
+            size_t num_tets = mesh.get_num_tets();
+            REQUIRE(num_tets > 0);
+            tet_ids.reserve(num_tets);
+            mesh.seq_foreach_tet([&](uint64_t tet_id) { tet_ids.push_back(tet_id); });
+            for (auto tet_id : tet_ids) {
+                if (mesh.has_tet(tet_id)) {
+                    mesh.split_edge(mtet::MTetMeshImpl::TetKey(tet_id), i % 6);
+                    validate_mesh(mesh);
+                }
+            }
+        }
+    }
+}
+

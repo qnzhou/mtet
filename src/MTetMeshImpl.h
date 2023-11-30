@@ -58,6 +58,8 @@ struct TriangleEqual
 
 inline void set_tag(dod::slot_map<MTet>::key& key, uint8_t local_index, uint8_t value)
 {
+    assert(local_index < 4);
+    assert(value < 4);
     auto tag = key.get_tag();
     uint16_t mask = 3 << (10 - local_index * 2);
     tag &= ~mask;
@@ -67,6 +69,7 @@ inline void set_tag(dod::slot_map<MTet>::key& key, uint8_t local_index, uint8_t 
 
 inline uint8_t get_tag(dod::slot_map<MTet>::key key, uint8_t local_index)
 {
+    assert(local_index < 4);
     auto tag = key.get_tag();
     uint16_t mask = 3 << (10 - local_index * 2);
     return static_cast<uint8_t>((tag & mask) >> (10 - local_index * 2));
@@ -210,15 +213,22 @@ public:
             // Update adjacency.
             if (adj_tet_id != invalid_key) {
                 const MTet& adj_tet = *m_tets.get(adj_tet_id);
+                uint8_t sum = 0; // Local indices in mirror should sum to 6.
 
                 // Update tag to store mirror corner mapping.
                 for (uint8_t i = 0; i < 4; i++) {
                     for (uint8_t j = 0; j < 4; j++) {
                         if (tet.vertices[i] == adj_tet.vertices[j]) {
                             set_tag(adj_tet_id, i, j);
+                            sum += j;
                         }
                     }
                 }
+                set_tag(adj_tet_id, local_fid, 6 - sum);
+                assert(
+                    get_tag(adj_tet_id, 0) + get_tag(adj_tet_id, 1) + get_tag(adj_tet_id, 2) +
+                        get_tag(adj_tet_id, 3) ==
+                    6);
                 tet.mirrors[i0] = adj_tet_id;
             } else {
                 tet.mirrors[i0] = invalid_key;
@@ -239,11 +249,15 @@ public:
             process_tet_triangle(tet_id, 3);
         };
 
-        dr::parallel_for(dr::blocked_range<size_t>(0, n, 1), [&](dr::blocked_range<size_t> range) {
-            for (size_t i = range.begin(); i != range.end(); ++i) {
-                process_tet(tet_ids[i]);
-            }
-        });
+        for (size_t i = 0; i < n; i++) {
+            process_tet(tet_ids[i]);
+        }
+        // dr::parallel_for(dr::blocked_range<size_t>(0, n, 1), [&](dr::blocked_range<size_t> range)
+        // {
+        //     for (size_t i = range.begin(); i != range.end(); ++i) {
+        //         process_tet(tet_ids[i]);
+        //     }
+        // });
     }
 
 public:
@@ -308,8 +322,11 @@ public:
 
     uint64_t split_edge(uint64_t tet_id, uint8_t local_index)
     {
-        constexpr std::array<std::array<uint8_t, 2>, 6> edge_map = {
-            {{0, 1}, {1, 2}, {2, 0}, {0, 3}, {1, 3}, {2, 3}}};
+        if (local_index >= 6) {
+            throw std::runtime_error("Invalid local index");
+        }
+        constexpr std::array<std::array<uint8_t, 4>, 6> edge_map = {
+            {{0, 1, 2, 3}, {1, 2, 0, 3}, {2, 0, 1, 3}, {0, 3, 1, 2}, {1, 3, 2, 0}, {2, 3, 0, 1}}};
 
         auto get_next_tet_id =
             [&](TetKey curr_tet_id, uint8_t llv0, uint8_t llv1, uint8_t llv2, uint8_t llv3) {
@@ -318,6 +335,12 @@ public:
                 assert(llv1 < 4);
                 assert(llv2 < 4);
                 assert(llv3 < 4);
+                assert(llv0 != llv1);
+                assert(llv0 != llv2);
+                assert(llv0 != llv3);
+                assert(llv1 != llv2);
+                assert(llv1 != llv3);
+                assert(llv2 != llv3);
 
                 const auto& curr_tet = *m_tets.get(curr_tet_id);
                 TetKey next_tet_id = TetKey(curr_tet.mirrors[llv3]);
@@ -392,13 +415,14 @@ public:
             tet_0.mirrors[llv2] = invalid_key;
             tet_0.mirrors[llv3] = invalid_key;
 
-            tet_1.mirrors[llv0] = t0;
-            tet_1.mirrors[llv1] = o0;
+            tet_1.mirrors[llv0] = o0;
+            tet_1.mirrors[llv1] = t0;
             tet_1.mirrors[llv2] = invalid_key;
             tet_1.mirrors[llv3] = invalid_key;
 
             // Update mirror information for tet adjacent to the new tets.
             if (o0 != invalid_key) {
+                assert(m_tets.has_key(o0));
                 auto& tet_o0 = *m_tets.get(o0);
                 auto o0_llv0 = get_tag(o0, llv0);
                 auto old_t0_mirror = TetKey(tet_o0.mirrors[o0_llv0]);
@@ -406,6 +430,7 @@ public:
                 tet_o0.mirrors[o0_llv0] = t1;
             }
             if (o1 != invalid_key) {
+                assert(m_tets.has_key(o1));
                 auto& tet_o1 = *m_tets.get(o1);
                 auto o1_llv1 = get_tag(o1, llv1);
                 auto old_t1_mirror = TetKey(tet_o1.mirrors[o1_llv1]);
@@ -421,8 +446,8 @@ public:
         // lv2 and lv3 are the indices of vertices in the opposite edge.
         uint8_t lv0 = edge_map[local_index][0];
         uint8_t lv1 = edge_map[local_index][1];
-        uint8_t lv2 = ~(lv0 & lv1) & 3;
-        uint8_t lv3 = (lv0 ^ lv1 ^ lv2) & 3;
+        uint8_t lv2 = edge_map[local_index][2];
+        uint8_t lv3 = edge_map[local_index][3];
 
         TetKey key{tet_id};
         auto ptr = m_tets.get(key);
@@ -441,6 +466,8 @@ public:
             bool on_boundary = false;
             do {
                 assert(curr_key != invalid_key);
+                assert(m_tets.get(curr_key)->vertices[lv0] == v0);
+                assert(m_tets.get(curr_key)->vertices[lv1] == v1);
 
                 TetKey next_key;
                 uint8_t llv0, llv1, llv2, llv3;
@@ -457,10 +484,12 @@ public:
                 lv1 = llv1;
                 lv2 = llv2;
                 lv3 = llv3;
-            } while (is_same_key(curr_key, key));
+            } while (!is_same_key(curr_key, key));
             // Current key should hold a valid key that serve as the first tet to traverse in the
             // lv3 direction. lv0 to lv3 should be valid local indices for curr_key.
             assert(m_tets.has_key(curr_key));
+            assert(m_tets.get(curr_key)->vertices[lv0] == v0);
+            assert(m_tets.get(curr_key)->vertices[lv1] == v1);
 
             // Gather 1-ring tets around the edge
             std::vector<TetKey> old_one_ring, new_one_ring_0, new_one_ring_1;
@@ -470,19 +499,32 @@ public:
             new_one_ring_1.reserve(16);
             local_indices.reserve(16 * 4);
 
+            TetKey init_key = curr_key;
             do {
+                const auto& curr_tet = *m_tets.get(curr_key);
+                assert(curr_tet.vertices[lv0] == v0);
+                assert(curr_tet.vertices[lv1] == v1);
+
                 old_one_ring.push_back(curr_key);
-                auto [t0, t1] = split_tet(curr_key, vm, lv0, lv1, lv2, lv3);
-                new_one_ring_0.push_back(t0);
-                new_one_ring_1.push_back(t1);
                 local_indices.push_back(lv0);
                 local_indices.push_back(lv1);
                 local_indices.push_back(lv2);
                 local_indices.push_back(lv3);
                 std::tie(curr_key, lv0, lv1, lv2, lv3) =
                     get_next_tet_id(curr_key, lv0, lv1, lv2, lv3);
-            } while (curr_key != invalid_key && is_same_key(curr_key, key));
+            } while (curr_key != invalid_key && !is_same_key(curr_key, init_key));
             size_t one_ring_size = old_one_ring.size();
+
+            for (size_t i = 0; i < one_ring_size; i++) {
+                auto curr_key = old_one_ring[i];
+                lv0 = local_indices[i * 4 + 0];
+                lv1 = local_indices[i * 4 + 1];
+                lv2 = local_indices[i * 4 + 2];
+                lv3 = local_indices[i * 4 + 3];
+                auto [t0, t1] = split_tet(curr_key, vm, lv0, lv1, lv2, lv3);
+                new_one_ring_0.push_back(t0);
+                new_one_ring_1.push_back(t1);
+            }
 
             for (size_t i = 0; i < one_ring_size; i++) {
                 if (on_boundary && i == one_ring_size - 1) break;
@@ -551,6 +593,21 @@ public:
         }
     }
 
+    void seq_foreach_vertex(const std::function<void(uint64_t)>& callback) const
+    {
+        for ([[maybe_unused]] const auto& [key, value] : m_vertices.items()) {
+            callback(key);
+        }
+    }
+
+    void seq_foreach_tet(const std::function<void(uint64_t)>& callback) const
+    {
+        for ([[maybe_unused]] const auto& [key, value] : m_tets.items()) {
+            assert(&value.get() == m_tets.get(key));
+            callback(key);
+        }
+    }
+
 public:
     /**
      * Internal: get the adjacent tet of a tet across one of its triangles.
@@ -569,6 +626,9 @@ public:
             throw std::runtime_error("Tet not found");
         }
     }
+
+    const auto& get_vertices() const { return m_vertices; }
+    const auto& get_tets() const { return m_tets; }
 
 private:
     VertexMap m_vertices;
