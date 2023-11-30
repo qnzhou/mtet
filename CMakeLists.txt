@@ -7,6 +7,7 @@ include(indirect-value-lite)
 include(slot_map)
 include(unordered_dense)
 include(nanothread)
+include(sanitizers)
 
 option(MTET_BUILD_TESTS "Build tests" OFF)
 
