@@ -3,8 +3,10 @@
 #include <ankerl/unordered_dense.h>
 #include <mshio/mshio.h>
 
+#include <cassert>
+
 namespace mtet {
-void save_mesh(std::string filename, const mtet::MTetMesh& mesh)
+void save_mesh(std::string filename, const MTetMesh& mesh)
 {
     mshio::MshSpec spec;
     spec.mesh_format.file_type = 0; // binary
@@ -28,7 +30,7 @@ void save_mesh(std::string filename, const mtet::MTetMesh& mesh)
     IndexMap vertex_tag_map;
     vertex_tag_map.reserve(mesh.get_num_vertices());
 
-    mesh.seq_foreach_vertex([&](uint64_t vid, std::span<const mtet::Scalar, 3> data) {
+    mesh.seq_foreach_vertex([&](uint64_t vid, std::span<const Scalar, 3> data) {
         size_t vertex_tag = vertex_tag_map.size() + 1;
         vertex_tag_map[vid] = vertex_tag;
         node_block.tags.push_back(vertex_tag);
@@ -62,6 +64,39 @@ void save_mesh(std::string filename, const mtet::MTetMesh& mesh)
     });
 
     mshio::save_msh(filename, spec);
+}
+
+MTetMesh load_mesh(std::string filename)
+{
+    mshio::MshSpec spec = mshio::load_msh(filename);
+    std::vector<uint64_t> vertex_ids;
+    vertex_ids.reserve(spec.nodes.num_nodes);
+
+    MTetMesh mesh;
+    for (const auto& node_block : spec.nodes.entity_blocks) {
+        assert(node_block.entity_dim == 3);
+        assert(node_block.data.size() % 3 == 0);
+        for (size_t i = 0; i < node_block.data.size(); i += 3) {
+            auto vid =
+                mesh.add_vertex(node_block.data[i], node_block.data[i + 1], node_block.data[i + 2]);
+            vertex_ids.push_back(vid);
+        }
+    }
+
+    for (const auto& element_block : spec.elements.entity_blocks) {
+        assert(element_block.entity_dim == 3);
+        assert(element_block.element_type == 4);
+        assert(element_block.data.size() % 5 == 0);
+        for (size_t i = 0; i < element_block.data.size(); i += 5) {
+            mesh.add_tet(vertex_ids[element_block.data[i + 1] - 1],
+                         vertex_ids[element_block.data[i + 2] - 1],
+                         vertex_ids[element_block.data[i + 3] - 1],
+                         vertex_ids[element_block.data[i + 4] - 1]);
+        }
+    }
+
+    mesh.initialize_connectivity();
+    return mesh;
 }
 
 } // namespace mtet
