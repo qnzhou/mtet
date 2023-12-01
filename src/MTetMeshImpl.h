@@ -10,6 +10,7 @@
 #include <ankerl/unordered_dense.h>
 #include <nanothread/nanothread.h>
 #include <slot_map.h>
+#include <SmallVector.h>
 
 #include <mtet/mtet.h>
 
@@ -491,12 +492,8 @@ public:
             assert(m_tets.get(curr_key)->vertices[lv1] == v1);
 
             // Gather 1-ring tets around the edge
-            std::vector<TetKey> old_one_ring, new_one_ring_0, new_one_ring_1;
-            std::vector<uint8_t> local_indices;
-            old_one_ring.reserve(16);
-            new_one_ring_0.reserve(16);
-            new_one_ring_1.reserve(16);
-            local_indices.reserve(16 * 4);
+            llvm_vecsmall::SmallVector<TetKey, 16> old_one_ring, new_one_ring_0, new_one_ring_1;
+            llvm_vecsmall::SmallVector<uint8_t, 16*4> local_indices;
 
             TetKey init_key = curr_key;
             do {

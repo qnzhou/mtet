@@ -9,6 +9,7 @@ include(slot_map)
 include(unordered_dense)
 include(nanothread)
 include(sanitizers)
+include(smallvector)
 
 option(MTET_BUILD_TESTS "Build tests" OFF)
 option(MTET_BUILD_EXAMPLES "Build examples" OFF)
@@ -24,6 +25,7 @@ target_link_libraries(mtet PRIVATE
     unordered_dense::unordered_dense
     nanothread::nanothread
     mshio::mshio
+    smallvector::smallvector
     PUBLIC
     nonstd::indirect-value-lite
 )
@@ -42,6 +44,7 @@ if(MTET_BUILD_TESTS)
         mtet::mtet
         slot_map::slot_map
         unordered_dense::unordered_dense
+        smallvector::smallvector
         nanothread::nanothread
         Catch2::Catch2WithMain)
     target_compile_definitions(mtet_tests PRIVATE CATCH_CONFIG_ENABLE_BENCHMARKING)
