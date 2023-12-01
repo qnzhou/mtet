@@ -76,10 +76,14 @@ public:
      */
     uint64_t split_edge(uint64_t tet_id, uint8_t local_edge_id);
 
-    void par_foreach_vertex(const std::function<void(uint64_t)>& callback) const;
-    void seq_foreach_vertex(const std::function<void(uint64_t)>& callback) const;
-    void par_foreach_tet(const std::function<void(uint64_t)>& callback) const;
-    void seq_foreach_tet(const std::function<void(uint64_t)>& callback) const;
+    void par_foreach_vertex(
+        const std::function<void(uint64_t, std::span<const Scalar, 3>)>& callback) const;
+    void seq_foreach_vertex(
+        const std::function<void(uint64_t, std::span<const Scalar, 3>)>& callback) const;
+    void par_foreach_tet(
+        const std::function<void(uint64_t, std::span<const uint64_t, 4>)>& callback) const;
+    void seq_foreach_tet(
+        const std::function<void(uint64_t, std::span<const uint64_t, 4>)>& callback) const;
 
 private:
     nonstd::indirect_value<MTetMeshImpl> m_impl;

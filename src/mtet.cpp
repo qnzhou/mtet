@@ -76,4 +76,28 @@ uint64_t MTetMesh::split_edge(uint64_t tet_id, uint8_t local_index)
     return m_impl->split_edge(tet_id, local_index);
 }
 
+void MTetMesh::par_foreach_vertex(
+    const std::function<void(uint64_t, std::span<const Scalar, 3>)>& func) const
+{
+    m_impl->par_foreach_vertex(func);
+}
+
+void MTetMesh::seq_foreach_vertex(
+    const std::function<void(uint64_t, std::span<const Scalar, 3>)>& func) const
+{
+    m_impl->seq_foreach_vertex(func);
+}
+
+void MTetMesh::par_foreach_tet(
+    const std::function<void(uint64_t, std::span<const uint64_t, 4>)>& func) const
+{
+    m_impl->par_foreach_tet(func);
+}
+
+void MTetMesh::seq_foreach_tet(
+    const std::function<void(uint64_t, std::span<const uint64_t, 4>)>& func) const
+{
+    m_impl->seq_foreach_tet(func);
+}
+
 } // namespace mtet

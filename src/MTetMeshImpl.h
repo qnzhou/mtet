@@ -249,15 +249,14 @@ public:
             process_tet_triangle(tet_id, 3);
         };
 
-        for (size_t i = 0; i < n; i++) {
-            process_tet(tet_ids[i]);
-        }
-        // dr::parallel_for(dr::blocked_range<size_t>(0, n, 1), [&](dr::blocked_range<size_t> range)
-        // {
-        //     for (size_t i = range.begin(); i != range.end(); ++i) {
-        //         process_tet(tet_ids[i]);
-        //     }
-        // });
+        // for (size_t i = 0; i < n; i++) {
+        //     process_tet(tet_ids[i]);
+        // }
+        dr::parallel_for(dr::blocked_range<size_t>(0, n, 1), [&](dr::blocked_range<size_t> range) {
+            for (size_t i = range.begin(); i != range.end(); ++i) {
+                process_tet(tet_ids[i]);
+            }
+        });
     }
 
 public:
@@ -593,18 +592,55 @@ public:
         }
     }
 
-    void seq_foreach_vertex(const std::function<void(uint64_t)>& callback) const
+    void par_foreach_vertex(
+        const std::function<void(uint64_t, std::span<const Scalar, 3>)>& callback) const
     {
-        for ([[maybe_unused]] const auto& [key, value] : m_vertices.items()) {
-            callback(key);
+        const size_t max_valid_index = m_vertices.getMaxValidIndex();
+        dr::parallel_for(
+            dr::blocked_range<size_t>(0, max_valid_index, 1),
+            [&](dr::blocked_range<size_t> range) {
+                for (auto index : range) {
+                    if (m_vertices.isValidIndex(index)) {
+                        VertexMap::const_kv_iterator itr(&m_vertices, index);
+                        const auto& [key, value] = *itr;
+                        callback(key, std::span<const Scalar, 3>(value.get().data(), 3));
+                    }
+                }
+            });
+    }
+
+    void seq_foreach_vertex(
+        const std::function<void(uint64_t, std::span<const Scalar, 3>)>& callback) const
+    {
+        for (const auto& [key, value] : m_vertices.items()) {
+            callback(key, std::span<const Scalar, 3>(value.get().data(), 3));
         }
     }
 
-    void seq_foreach_tet(const std::function<void(uint64_t)>& callback) const
+    void par_foreach_tet(
+        const std::function<void(uint64_t, std::span<const uint64_t, 4>)>& callback) const
     {
-        for ([[maybe_unused]] const auto& [key, value] : m_tets.items()) {
+        const size_t max_valid_index = m_tets.getMaxValidIndex();
+        dr::parallel_for(
+            dr::blocked_range<size_t>(0, max_valid_index, 1),
+            [&](dr::blocked_range<size_t> range) {
+                for (auto index : range) {
+                    if (m_tets.isValidIndex(index)) {
+                        TetMap::const_kv_iterator itr(&m_tets, index);
+                        const auto& [key, value] = *itr;
+                        assert(&value.get() == m_tets.get(key));
+                        callback(key, std::span<const uint64_t, 4>(value.get().vertices, 4));
+                    }
+                }
+            });
+    }
+
+    void seq_foreach_tet(
+        const std::function<void(uint64_t, std::span<const uint64_t, 4>)>& callback) const
+    {
+        for (const auto& [key, value] : m_tets.items()) {
             assert(&value.get() == m_tets.get(key));
-            callback(key);
+            callback(key, std::span<const uint64_t, 4>(value.get().vertices, 4));
         }
     }
 

@@ -8,7 +8,7 @@ include(CPM)
 CPMAddPackage(
   NAME slot_map
   GITHUB_REPOSITORY qnzhou/slot_map
-  GIT_TAG bc21042de3b20dd96a7d42e454669350b2b74388
+  GIT_TAG 98717cc2b63c3866a00272894fcf4ea8ce1fe484
   DOWNLOAD_ONLY YES
 )
 

@@ -6,7 +6,7 @@
 
 void validate_mesh(const mtet::MTetMeshImpl& mesh)
 {
-    mesh.seq_foreach_tet([&](uint64_t tet_id) {
+    mesh.par_foreach_tet([&](uint64_t tet_id, std::span<const uint64_t, 4> tet_vertices) {
         using VertexKey = mtet::MTetMeshImpl::VertexKey;
         using TetKey = mtet::MTetMeshImpl::TetKey;
         TetKey key(tet_id);
@@ -17,8 +17,13 @@ void validate_mesh(const mtet::MTetMeshImpl& mesh)
 
         auto ptr = tets.get(key);
         REQUIRE(ptr != nullptr);
-
         const auto& tet = *ptr;
+
+        REQUIRE(tet.vertices[0] == tet_vertices[0]);
+        REQUIRE(tet.vertices[1] == tet_vertices[1]);
+        REQUIRE(tet.vertices[2] == tet_vertices[2]);
+        REQUIRE(tet.vertices[3] == tet_vertices[3]);
+
         REQUIRE(vertices.has_key(VertexKey(tet.vertices[0])));
         REQUIRE(vertices.has_key(VertexKey(tet.vertices[1])));
         REQUIRE(vertices.has_key(VertexKey(tet.vertices[2])));
@@ -134,7 +139,8 @@ TEST_CASE("slot_map", "[slot_map]")
     using TetMap = mtet::MTetMeshImpl::TetMap;
     TetMap tet_map;
 
-    SECTION("Empty") {
+    SECTION("Empty")
+    {
         REQUIRE(tet_map.empty());
         REQUIRE(tet_map.size() == 0);
         auto begin = tet_map.begin();
@@ -142,7 +148,8 @@ TEST_CASE("slot_map", "[slot_map]")
         REQUIRE(begin == end);
     }
 
-    SECTION("Empty2") {
+    SECTION("Empty2")
+    {
         auto key = tet_map.emplace();
         tet_map.erase(key);
 
@@ -260,7 +267,7 @@ TEST_CASE("split_edge", "[mtet]")
     SECTION("case 3")
     {
         // split in the loop.
-        mesh.seq_foreach_tet([&](uint64_t tet_id) {
+        mesh.seq_foreach_tet([&](uint64_t tet_id, std::span<const uint64_t, 4>) {
             if (mesh.has_tet(tet_id)) {
                 mesh.split_edge(mtet::MTetMeshImpl::TetKey(tet_id), 1);
             }
@@ -277,7 +284,8 @@ TEST_CASE("split_edge", "[mtet]")
             size_t num_tets = mesh.get_num_tets();
             REQUIRE(num_tets > 0);
             tet_ids.reserve(num_tets);
-            mesh.seq_foreach_tet([&](uint64_t tet_id) { tet_ids.push_back(tet_id); });
+            mesh.seq_foreach_tet(
+                [&](uint64_t tet_id, std::span<const uint64_t, 4>) { tet_ids.push_back(tet_id); });
             for (auto tet_id : tet_ids) {
                 if (mesh.has_tet(tet_id)) {
                     mesh.split_edge(mtet::MTetMeshImpl::TetKey(tet_id), i % 6);
