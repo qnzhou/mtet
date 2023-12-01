@@ -1,6 +1,7 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <mtet/io.h>
 #include <mtet/mtet.h>
 
 #include <iostream>
@@ -56,9 +57,15 @@ TEST_CASE("benchmark", "[mtet][.benchmark]")
         return count;
     };
 
-    BENCHMARK_ADVANCED("1M split")(Catch::Benchmark::Chronometer meter)
+    constexpr size_t N = 1000000;
+    auto mesh = generate_base_mesh();
+    auto num_splits = split_until(mesh, N);
+    save_mesh("debug.msh", mesh);
+    std::cout << "num splits: " << num_splits << std::endl;
+    std::cout << "  num tets: " << mesh.get_num_tets() << std::endl;
+
+    BENCHMARK_ADVANCED("1-1M tets")(Catch::Benchmark::Chronometer meter)
     {
-        constexpr size_t N = 1000000;
         auto mesh = generate_base_mesh();
         meter.measure([&] { return split_until(mesh, N); });
     };
