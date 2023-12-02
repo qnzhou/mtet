@@ -328,6 +328,21 @@ public:
         constexpr std::array<std::array<uint8_t, 4>, 6> edge_map = {
             {{0, 1, 2, 3}, {1, 2, 0, 3}, {2, 0, 1, 3}, {0, 3, 1, 2}, {1, 3, 2, 0}, {2, 3, 0, 1}}};
 
+        /**
+         * Get the next tet adjacent to the current tet around a given edge.
+         *
+         * @param curr_tet_id  The id of the current tet.
+         * @param llv0         The local index of the tet.
+         * @param llv1         The local index of the tet.
+         * @param llv2         The local index of the tet.
+         * @param llv3         The local index of the tet.
+         *
+         * The local indices llv0 and llv1 specifies the edge that we are traversing around.
+         * The local index llv3 specifies the vertex that is opposite to the face shared by the
+         * current tet and the next tet.
+         *
+         * @return The id of the next tet.
+         */
         auto get_next_tet_id =
             [&](TetKey curr_tet_id, uint8_t llv0, uint8_t llv1, uint8_t llv2, uint8_t llv3) {
                 assert(m_tets.has_key(curr_tet_id));
@@ -356,6 +371,17 @@ public:
 
         /**
          * Split the current tet along the edge [llv0, llv1] at vm.
+         *
+         * @param curr_tet_id  The id of the current tet.
+         * @param vm           The id of the edge mid-point vertex.
+         * @param llv0         The local index of the tet.
+         * @param llv1         The local index of the tet.
+         * @param llv2         The local index of the tet.
+         * @param llv3         The local index of the tet.
+         *
+         * The local indices llv0 and llv1 specifies the edge that we are splitting.
+         *
+         * @return The ids of the two new tets resulting from the split.
          */
         auto split_tet = [&](TetKey curr_tet_id,
                              uint64_t vm,
