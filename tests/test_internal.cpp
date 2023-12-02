@@ -107,8 +107,16 @@ TEST_CASE("tag", "[slotmap]")
 
     for (uint8_t i = 0; i < 4; i++) {
         mtet::set_mirror_index(key, i, i);
+    }
+    mtet::set_edge_index(key, 3);
+    REQUIRE(mtet::get_edge_index(key) == 3);
+    mtet::set_edge_index(key, 3, 2);
+
+    for (uint8_t i = 0; i < 4; i++) {
         REQUIRE(mtet::get_mirror_index(key, i) == i);
     }
+    REQUIRE(mtet::get_edge_index(key) == 5);
+
     REQUIRE(key != key_copy);
 }
 

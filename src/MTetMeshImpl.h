@@ -121,6 +121,74 @@ inline uint8_t get_mirror_index(dod::slot_map<MTet>::key key, uint8_t local_inde
 }
 
 /**
+ * Set the local edge index in a key.
+ *
+ * @param key[in/out] The target tet id.
+ * @param edge_index   The local edge index of the target tet.
+ */
+inline void set_edge_index(dod::slot_map<MTet>::key& key, uint8_t edge_index)
+{
+    assert(edge_index < 6);
+    auto tag = key.get_tag();
+    constexpr uint16_t mask = 15;
+    tag &= ~mask;
+    tag |= edge_index;
+    key.set_tag(tag);
+}
+
+/**
+ * Se the local edge index in a key.
+ *
+ * @param key[in/out] The target tet id.
+ * @param lv0          The first local vertex index of the edge.
+ * @param lv1          The second local vertex index of the edge.
+ *
+ * Here is the edge index to local vertices index mapping:
+ *   0: [v0, v1],
+ *   1: [v1, v2],
+ *   2: [v2, v0],
+ *   3: [v0, v3],
+ *   4: [v1, v3],
+ *   5: [v2, v3]
+ */
+inline void set_edge_index(dod::slot_map<MTet>::key& key, uint8_t lv0, uint8_t lv1)
+{
+    constexpr uint8_t invalid_edge_index = 0xff;
+    constexpr uint8_t edge_index_table[13] {
+        invalid_edge_index, // 0: 0b0000
+        invalid_edge_index, // 1: 0b0001
+        invalid_edge_index, // 2: 0b0010
+        0,                  // 3: 0b0011
+        invalid_edge_index, // 4: 0b0100
+        2,                  // 5: 0b0101
+        1,                  // 6: 0b0110
+        invalid_edge_index, // 7: 0b0111
+        invalid_edge_index, // 8: 0b1000
+        3,                  // 9: 0b1001
+        4,                  // 10: 0b1010
+        invalid_edge_index, // 11: 0b1011
+        5                   // 12: 0b1100
+    };
+
+    assert(lv0 < 4);
+    assert(lv1 < 4);
+    uint8_t bitmap = 0 | (1 << lv0) | (1 << lv1);
+    assert(bitmap < 13);
+    assert(edge_index_table[bitmap] != invalid_edge_index);
+    set_edge_index(key, edge_index_table[bitmap]);
+}
+
+/**
+ * Get the local edge index stored in a key.
+ */
+inline uint8_t get_edge_index(dod::slot_map<MTet>::key key)
+{
+    auto tag = key.get_tag();
+    constexpr uint16_t mask = 15;
+    return static_cast<uint8_t>(tag & mask);
+}
+
+/**
  * Check if two keys represent the same tet.
  *
  * @param key1 The first key.
@@ -299,9 +367,6 @@ public:
             process_tet_triangle(tet_id, 3);
         };
 
-        // for (size_t i = 0; i < n; i++) {
-        //     process_tet(tet_ids[i]);
-        // }
         dr::parallel_for(dr::blocked_range<size_t>(0, n, 1), [&](dr::blocked_range<size_t> range) {
             for (size_t i = range.begin(); i != range.end(); ++i) {
                 process_tet(tet_ids[i]);
