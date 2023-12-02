@@ -7,10 +7,10 @@
 #include <stdexcept>
 #include <vector>
 
+#include <SmallVector.h>
 #include <ankerl/unordered_dense.h>
 #include <nanothread/nanothread.h>
 #include <slot_map.h>
-#include <SmallVector.h>
 
 #include <mtet/mtet.h>
 
@@ -18,17 +18,36 @@ namespace dr = drjit; // For nanothread
 
 namespace mtet {
 
-const uint64_t invalid_key = dod::slot_map<int>::key::invalid();
+/// Invalid key for slot_map.
+/// This is equivalent to dod::slot_map_key64<T>::invalid() for any `T`.
+constexpr uint64_t invalid_key = 0;
 
 using MVertex = std::array<Scalar, 3>;
 
+/**
+ * Tet data structrue.
+ */
 struct MTet
 {
+    /// Vertex keys of a tet. The vertex order determines the tet orientation.
+    /// vertex[0] should be on the negative side of the face (vertex[1], vertex[2], vertex[3]).
     uint64_t vertices[4]{invalid_key, invalid_key, invalid_key, invalid_key};
+
+    /// Tet keys of the mirror tets.
+    ///
+    /// The tag of each tet key is used to store mirror indices of the local indices of
+    /// the current tet. Use `set_mirror_index` and `get_mirror_index` to access the
+    /// mirror indices.
     uint64_t mirrors[4]{invalid_key, invalid_key, invalid_key, invalid_key};
 };
 
 
+/**
+ * Triangle hash function.
+ *
+ * This hash function is agnostic to the vertex order and triangle orientation. I.e. all the of the
+ * following triangles will have the same hash: [0, 1, 2], [1, 2, 0], [2, 1, 0].
+ */
 struct TriangleHash
 {
     using is_avalanching = void;
@@ -41,6 +60,12 @@ struct TriangleHash
     }
 };
 
+/**
+ * Triangle equality function.
+ *
+ * This hash function is agnostic to the vertex order and triangle orientation. I.e. all the of the
+ * following triangles are considered as equal: [0, 1, 2], [1, 2, 0], [2, 1, 0].
+ */
 struct TriangleEqual
 {
     using is_transparent = void;
@@ -57,7 +82,18 @@ struct TriangleEqual
     }
 };
 
-inline void set_tag(dod::slot_map<MTet>::key& key, uint8_t local_index, uint8_t value)
+
+/**
+ * Set the mirror local index in a key.
+ *
+ * @param key[in/out] The target tet id.
+ * @param local_index The local index of the current tet, which is adjacent to the target tet.
+ * @param value       The local index of the target tet that mirrors to the `local_index` in the
+ *                    current tet.
+ *
+ * The target `key` will be updated with the new mirror index.
+ */
+inline void set_mirror_index(dod::slot_map<MTet>::key& key, uint8_t local_index, uint8_t value)
 {
     assert(local_index < 4);
     assert(value < 4);
@@ -68,7 +104,15 @@ inline void set_tag(dod::slot_map<MTet>::key& key, uint8_t local_index, uint8_t 
     key.set_tag(tag);
 }
 
-inline uint8_t get_tag(dod::slot_map<MTet>::key key, uint8_t local_index)
+/**
+ * Get the mirror local index stored in a key.
+ *
+ * @param key[in]       The target tet id.
+ * @param local_index   The local index of the current tet, which is adjacent to the target tet.
+ *
+ * @return The local index of the target tet that mirrors to the `local_index` in the current tet.
+ */
+inline uint8_t get_mirror_index(dod::slot_map<MTet>::key key, uint8_t local_index)
 {
     assert(local_index < 4);
     auto tag = key.get_tag();
@@ -76,11 +120,16 @@ inline uint8_t get_tag(dod::slot_map<MTet>::key key, uint8_t local_index)
     return static_cast<uint8_t>((tag & mask) >> (10 - local_index * 2));
 }
 
-inline uint32_t get_index(dod::slot_map<MTet>::key key)
-{
-    return dod::slot_map<MTet>::key::toIndex(key);
-}
-
+/**
+ * Check if two keys represent the same tet.
+ *
+ * @param key1 The first key.
+ * @param key2 The second key.
+ *
+ * @return True if the two keys are the same.
+ *
+ * @note This is different from `key1 == key2`. This function ignores the tag bits.
+ */
 inline bool is_same_key(dod::slot_map<MTet>::key key1, dod::slot_map<MTet>::key key2)
 {
     // Zero out the tag bits before comparison.
@@ -220,15 +269,15 @@ public:
                 for (uint8_t i = 0; i < 4; i++) {
                     for (uint8_t j = 0; j < 4; j++) {
                         if (tet.vertices[i] == adj_tet.vertices[j]) {
-                            set_tag(adj_tet_id, i, j);
+                            set_mirror_index(adj_tet_id, i, j);
                             sum += j;
                         }
                     }
                 }
-                set_tag(adj_tet_id, local_fid, 6 - sum);
+                set_mirror_index(adj_tet_id, local_fid, 6 - sum);
                 assert(
-                    get_tag(adj_tet_id, 0) + get_tag(adj_tet_id, 1) + get_tag(adj_tet_id, 2) +
-                        get_tag(adj_tet_id, 3) ==
+                    get_mirror_index(adj_tet_id, 0) + get_mirror_index(adj_tet_id, 1) +
+                        get_mirror_index(adj_tet_id, 2) + get_mirror_index(adj_tet_id, 3) ==
                     6);
                 tet.mirrors[i0] = adj_tet_id;
             } else {
@@ -359,10 +408,10 @@ public:
 
                 const auto& curr_tet = *m_tets.get(curr_tet_id);
                 TetKey next_tet_id = TetKey(curr_tet.mirrors[llv3]);
-                llv0 = get_tag(next_tet_id, llv0);
-                llv1 = get_tag(next_tet_id, llv1);
-                llv2 = get_tag(next_tet_id, llv2);
-                llv3 = get_tag(next_tet_id, llv3);
+                llv0 = get_mirror_index(next_tet_id, llv0);
+                llv1 = get_mirror_index(next_tet_id, llv1);
+                llv2 = get_mirror_index(next_tet_id, llv2);
+                llv3 = get_mirror_index(next_tet_id, llv3);
 
                 // Note that we swap llv2 and llv3 here intentionally.
                 return std::make_tuple(next_tet_id, llv0, llv1, llv3, llv2);
@@ -426,15 +475,15 @@ public:
             auto& tet_1 = *m_tets.get(t1);
 
             // Update mirror information for new tets.
-            set_tag(t1, llv0, llv1);
-            set_tag(t1, llv1, llv0);
-            set_tag(t1, llv2, llv2);
-            set_tag(t1, llv3, llv3);
+            set_mirror_index(t1, llv0, llv1);
+            set_mirror_index(t1, llv1, llv0);
+            set_mirror_index(t1, llv2, llv2);
+            set_mirror_index(t1, llv3, llv3);
 
-            set_tag(t0, llv0, llv1);
-            set_tag(t0, llv1, llv0);
-            set_tag(t0, llv2, llv2);
-            set_tag(t0, llv3, llv3);
+            set_mirror_index(t0, llv0, llv1);
+            set_mirror_index(t0, llv1, llv0);
+            set_mirror_index(t0, llv2, llv2);
+            set_mirror_index(t0, llv3, llv3);
 
             tet_0.mirrors[llv0] = t1;
             tet_0.mirrors[llv1] = o1;
@@ -450,7 +499,7 @@ public:
             if (o0 != invalid_key) {
                 assert(m_tets.has_key(o0));
                 auto& tet_o0 = *m_tets.get(o0);
-                auto o0_llv0 = get_tag(o0, llv0);
+                auto o0_llv0 = get_mirror_index(o0, llv0);
                 auto old_t0_mirror = TetKey(tet_o0.mirrors[o0_llv0]);
                 t1.set_tag(old_t0_mirror.get_tag());
                 tet_o0.mirrors[o0_llv0] = t1;
@@ -458,7 +507,7 @@ public:
             if (o1 != invalid_key) {
                 assert(m_tets.has_key(o1));
                 auto& tet_o1 = *m_tets.get(o1);
-                auto o1_llv1 = get_tag(o1, llv1);
+                auto o1_llv1 = get_mirror_index(o1, llv1);
                 auto old_t1_mirror = TetKey(tet_o1.mirrors[o1_llv1]);
                 t0.set_tag(old_t1_mirror.get_tag());
                 tet_o1.mirrors[o1_llv1] = t0;
@@ -519,7 +568,7 @@ public:
 
             // Gather 1-ring tets around the edge
             llvm_vecsmall::SmallVector<TetKey, 16> old_one_ring, new_one_ring_0, new_one_ring_1;
-            llvm_vecsmall::SmallVector<uint8_t, 16*4> local_indices;
+            llvm_vecsmall::SmallVector<uint8_t, 16 * 4> local_indices;
 
             TetKey init_key = curr_key;
             do {
@@ -571,16 +620,16 @@ public:
                 assert(curr_tet_0.vertices[curr_lv1] == next_tet_0.vertices[next_lv1]);
                 assert(curr_tet_0.vertices[curr_lv2] == next_tet_0.vertices[next_lv3]);
 
-                set_tag(next_tet_id_0, curr_lv0, next_lv0);
-                set_tag(next_tet_id_0, curr_lv1, next_lv1);
-                set_tag(next_tet_id_0, curr_lv2, next_lv3);
-                set_tag(next_tet_id_0, curr_lv3, next_lv2);
+                set_mirror_index(next_tet_id_0, curr_lv0, next_lv0);
+                set_mirror_index(next_tet_id_0, curr_lv1, next_lv1);
+                set_mirror_index(next_tet_id_0, curr_lv2, next_lv3);
+                set_mirror_index(next_tet_id_0, curr_lv3, next_lv2);
                 curr_tet_0.mirrors[curr_lv3] = next_tet_id_0;
 
-                set_tag(curr_tet_id_0, next_lv0, curr_lv0);
-                set_tag(curr_tet_id_0, next_lv1, curr_lv1);
-                set_tag(curr_tet_id_0, next_lv2, curr_lv3);
-                set_tag(curr_tet_id_0, next_lv3, curr_lv2);
+                set_mirror_index(curr_tet_id_0, next_lv0, curr_lv0);
+                set_mirror_index(curr_tet_id_0, next_lv1, curr_lv1);
+                set_mirror_index(curr_tet_id_0, next_lv2, curr_lv3);
+                set_mirror_index(curr_tet_id_0, next_lv3, curr_lv2);
                 next_tet_0.mirrors[next_lv2] = curr_tet_id_0;
 
                 auto& curr_tet_id_1 = new_one_ring_1[i];
@@ -592,16 +641,16 @@ public:
                 assert(curr_tet_1.vertices[curr_lv1] == next_tet_1.vertices[next_lv1]);
                 assert(curr_tet_1.vertices[curr_lv2] == next_tet_1.vertices[next_lv3]);
 
-                set_tag(next_tet_id_1, curr_lv0, next_lv0);
-                set_tag(next_tet_id_1, curr_lv1, next_lv1);
-                set_tag(next_tet_id_1, curr_lv2, next_lv3);
-                set_tag(next_tet_id_1, curr_lv3, next_lv2);
+                set_mirror_index(next_tet_id_1, curr_lv0, next_lv0);
+                set_mirror_index(next_tet_id_1, curr_lv1, next_lv1);
+                set_mirror_index(next_tet_id_1, curr_lv2, next_lv3);
+                set_mirror_index(next_tet_id_1, curr_lv3, next_lv2);
                 curr_tet_1.mirrors[curr_lv3] = next_tet_id_1;
 
-                set_tag(curr_tet_id_1, next_lv0, curr_lv0);
-                set_tag(curr_tet_id_1, next_lv1, curr_lv1);
-                set_tag(curr_tet_id_1, next_lv2, curr_lv3);
-                set_tag(curr_tet_id_1, next_lv3, curr_lv2);
+                set_mirror_index(curr_tet_id_1, next_lv0, curr_lv0);
+                set_mirror_index(curr_tet_id_1, next_lv1, curr_lv1);
+                set_mirror_index(curr_tet_id_1, next_lv2, curr_lv3);
+                set_mirror_index(curr_tet_id_1, next_lv3, curr_lv2);
                 next_tet_1.mirrors[next_lv2] = curr_tet_id_1;
             }
 

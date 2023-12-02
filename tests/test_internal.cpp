@@ -38,7 +38,7 @@ void validate_mesh(const mtet::MTetMeshImpl& mesh)
 
             uint8_t sum = 0;
             for (uint8_t i = 0; i < 4; i++) {
-                uint8_t j = mtet::get_tag(key2, i);
+                uint8_t j = mtet::get_mirror_index(key2, i);
                 sum += j;
                 if (i != local_index) {
                     REQUIRE(tet.vertices[i] == tet2.vertices[j]);
@@ -106,8 +106,8 @@ TEST_CASE("tag", "[slotmap]")
     REQUIRE(key == key_copy);
 
     for (uint8_t i = 0; i < 4; i++) {
-        mtet::set_tag(key, i, i);
-        REQUIRE(mtet::get_tag(key, i) == i);
+        mtet::set_mirror_index(key, i, i);
+        REQUIRE(mtet::get_mirror_index(key, i) == i);
     }
     REQUIRE(key != key_copy);
 }
@@ -221,15 +221,15 @@ TEST_CASE("adjacency", "[mtet]")
     REQUIRE(TetKey::toIndex(t0_0) == TetKey::toIndex(TetKey(t1)));
     REQUIRE(TetKey::toIndex(t1_0) == TetKey::toIndex(TetKey(t0)));
 
-    REQUIRE(mtet::get_tag(t0_0, 0) == 0);
-    REQUIRE(mtet::get_tag(t0_0, 1) == 3);
-    REQUIRE(mtet::get_tag(t0_0, 2) == 2);
-    REQUIRE(mtet::get_tag(t0_0, 3) == 1);
+    REQUIRE(mtet::get_mirror_index(t0_0, 0) == 0);
+    REQUIRE(mtet::get_mirror_index(t0_0, 1) == 3);
+    REQUIRE(mtet::get_mirror_index(t0_0, 2) == 2);
+    REQUIRE(mtet::get_mirror_index(t0_0, 3) == 1);
 
-    REQUIRE(mtet::get_tag(t1_0, 0) == 0);
-    REQUIRE(mtet::get_tag(t1_0, 1) == 3);
-    REQUIRE(mtet::get_tag(t1_0, 2) == 2);
-    REQUIRE(mtet::get_tag(t1_0, 3) == 1);
+    REQUIRE(mtet::get_mirror_index(t1_0, 0) == 0);
+    REQUIRE(mtet::get_mirror_index(t1_0, 1) == 3);
+    REQUIRE(mtet::get_mirror_index(t1_0, 2) == 2);
+    REQUIRE(mtet::get_mirror_index(t1_0, 3) == 1);
 
     validate_mesh(mesh);
 }
