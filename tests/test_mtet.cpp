@@ -46,9 +46,9 @@ TEST_CASE("benchmark", "[mtet][.benchmark]")
     auto split_until = [](mtet::MTetMesh& mesh, size_t N) {
         size_t count = 0;
         while (mesh.get_num_tets() < N) {
-            mesh.seq_foreach_tet([&](uint64_t tet_id, std::span<const uint64_t, 4>) {
+            mesh.seq_foreach_tet([&](mtet::TetId tet_id, std::span<const mtet::VertexId, 4>) {
                 if (mesh.has_tet(tet_id)) {
-                    mesh.split_edge(tet_id, tet_id % 4);
+                    mesh.split_edge(tet_id, value_of(tet_id) % 4);
                     count++;
                 }
             });

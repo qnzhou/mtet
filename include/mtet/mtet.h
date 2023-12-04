@@ -4,11 +4,18 @@
 #include <span>
 
 #include <nonstd/indirect_value.hpp>
+#include <strong_type/strong_type.hpp>
+
 
 namespace mtet {
 
 using Scalar = double;
 class MTetMeshImpl;
+
+using VertexId =
+    strong::type<uint64_t, struct VertexId_, strong::equality, strong::default_constructible>;
+using TetId = strong::type<uint64_t, struct TetId_, strong::default_constructible>;
+using EdgeId = strong::type<uint64_t, struct EdgeId_>;
 
 class MTetMesh
 {
@@ -23,19 +30,19 @@ public:
     MTetMesh& operator=(MTetMesh&&) noexcept;
 
 public:
-    uint64_t add_vertex(Scalar x, Scalar y, Scalar z);
-    uint64_t add_tet(uint64_t v0, uint64_t v1, uint64_t v2, uint64_t v3);
+    VertexId add_vertex(Scalar x, Scalar y, Scalar z);
+    TetId add_tet(VertexId v0, VertexId v1, VertexId v2, VertexId v3);
     void initialize_connectivity();
 
 public:
-    bool has_vertex(uint64_t vertex_id) const;
-    bool has_tet(uint64_t tet_id) const;
+    bool has_vertex(VertexId vertex_id) const;
+    bool has_tet(TetId tet_id) const;
 
-    std::span<Scalar, 3> get_vertex(uint64_t vertex_id);
-    std::span<uint64_t, 4> get_tet(uint64_t tet_id);
+    std::span<Scalar, 3> get_vertex(VertexId vertex_id);
+    std::span<VertexId, 4> get_tet(TetId tet_id);
 
-    std::span<const Scalar, 3> get_vertex(uint64_t vertex_id) const;
-    std::span<const uint64_t, 4> get_tet(uint64_t tet_id) const;
+    std::span<const Scalar, 3> get_vertex(VertexId vertex_id) const;
+    std::span<const VertexId, 4> get_tet(TetId tet_id) const;
 
     size_t get_num_vertices() const;
     size_t get_num_tets() const;
@@ -49,7 +56,10 @@ public:
      * @param tet_id        The id of the tet to split.
      * @param local_edge_id The local edge id of the edge to split.
      *
-     * @return The id of the new vertex.
+     * @return [vid, e0_id, e1_id]
+     *         vid: The id of the new vertex.
+     *         e0_id: The id of the first half of the split edge.
+     *         e1_id: The id of the second half of the split edge.
      *
      * Let the oriented tet be [v0, v1, v2, v3]. The local edges order are the following:
      *   0: [v0, v1],
@@ -74,16 +84,16 @@ public:
      *              `\. |/
      *                 `v3
      */
-    uint64_t split_edge(uint64_t tet_id, uint8_t local_edge_id);
+    std::tuple<VertexId, EdgeId, EdgeId> split_edge(TetId tet_id, uint8_t local_edge_id);
 
     void par_foreach_vertex(
-        const std::function<void(uint64_t, std::span<const Scalar, 3>)>& callback) const;
+        const std::function<void(VertexId, std::span<const Scalar, 3>)>& callback) const;
     void seq_foreach_vertex(
-        const std::function<void(uint64_t, std::span<const Scalar, 3>)>& callback) const;
+        const std::function<void(VertexId, std::span<const Scalar, 3>)>& callback) const;
     void par_foreach_tet(
-        const std::function<void(uint64_t, std::span<const uint64_t, 4>)>& callback) const;
+        const std::function<void(TetId, std::span<const VertexId, 4>)>& callback) const;
     void seq_foreach_tet(
-        const std::function<void(uint64_t, std::span<const uint64_t, 4>)>& callback) const;
+        const std::function<void(TetId, std::span<const VertexId, 4>)>& callback) const;
 
 private:
     nonstd::indirect_value<MTetMeshImpl> m_impl;

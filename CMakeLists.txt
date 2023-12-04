@@ -10,6 +10,7 @@ include(unordered_dense)
 include(nanothread)
 include(sanitizers)
 include(smallvector)
+include(strong_type)
 
 option(MTET_BUILD_TESTS "Build tests" OFF)
 option(MTET_BUILD_EXAMPLES "Build examples" OFF)
@@ -28,6 +29,7 @@ target_link_libraries(mtet PRIVATE
     smallvector::smallvector
     PUBLIC
     nonstd::indirect-value-lite
+    strong_type::strong_type
 )
 add_library(mtet::mtet ALIAS mtet)
 target_compile_features(mtet PRIVATE cxx_std_20)

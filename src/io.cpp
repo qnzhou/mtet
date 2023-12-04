@@ -30,9 +30,9 @@ void save_mesh(std::string filename, const MTetMesh& mesh)
     IndexMap vertex_tag_map;
     vertex_tag_map.reserve(mesh.get_num_vertices());
 
-    mesh.seq_foreach_vertex([&](uint64_t vid, std::span<const Scalar, 3> data) {
+    mesh.seq_foreach_vertex([&](VertexId vid, std::span<const Scalar, 3> data) {
         size_t vertex_tag = vertex_tag_map.size() + 1;
-        vertex_tag_map[vid] = vertex_tag;
+        vertex_tag_map[value_of(vid)] = vertex_tag;
         node_block.tags.push_back(vertex_tag);
         node_block.data.insert(node_block.data.end(), data.begin(), data.end());
     });
@@ -52,14 +52,14 @@ void save_mesh(std::string filename, const MTetMesh& mesh)
     element_block.data.reserve(elements.num_elements * 5);
 
     size_t tet_tag = 1;
-    mesh.seq_foreach_tet([&](uint64_t tet_id, std::span<const uint64_t, 4> data) {
+    mesh.seq_foreach_tet([&](TetId, std::span<const VertexId, 4> data) {
         element_block.data.insert(
             element_block.data.end(),
             {tet_tag,
-             vertex_tag_map[data[0]],
-             vertex_tag_map[data[1]],
-             vertex_tag_map[data[2]],
-             vertex_tag_map[data[3]]});
+             vertex_tag_map[value_of(data[0])],
+             vertex_tag_map[value_of(data[1])],
+             vertex_tag_map[value_of(data[2])],
+             vertex_tag_map[value_of(data[3])]});
         tet_tag++;
     });
 
@@ -69,7 +69,7 @@ void save_mesh(std::string filename, const MTetMesh& mesh)
 MTetMesh load_mesh(std::string filename)
 {
     mshio::MshSpec spec = mshio::load_msh(filename);
-    std::vector<uint64_t> vertex_ids;
+    std::vector<VertexId> vertex_ids;
     vertex_ids.reserve(spec.nodes.num_nodes);
 
     MTetMesh mesh;
