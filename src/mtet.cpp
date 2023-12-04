@@ -91,6 +91,11 @@ size_t MTetMesh::get_num_tets() const
     return m_impl->get_num_tets();
 }
 
+std::tuple<VertexId, EdgeId, EdgeId> MTetMesh::split_edge(EdgeId edge_id)
+{
+    return m_impl->split_edge(edge_id);
+}
+
 std::tuple<VertexId, EdgeId, EdgeId> MTetMesh::split_edge(TetId tet_id, uint8_t local_index)
 {
     return m_impl->split_edge(tet_id, local_index);

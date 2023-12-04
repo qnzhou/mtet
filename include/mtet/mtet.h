@@ -65,6 +65,20 @@ public:
      *
      * The split will insert a new vertex at the mid point of the specified edge.
      *
+     * @param edge_id        The id of the edge to split.
+     *
+     * @return [vid, e0_id, e1_id]
+     *         vid: The id of the new vertex.
+     *         e0_id: The id of the first half of the split edge.
+     *         e1_id: The id of the second half of the split edge.
+     */
+    std::tuple<VertexId, EdgeId, EdgeId> split_edge(EdgeId edge_id);
+
+    /**
+     * Split the edge of the given tet with the given local edge id.
+     *
+     * The split will insert a new vertex at the mid point of the specified edge.
+     *
      * @param tet_id        The id of the tet to split.
      * @param local_edge_id The local edge id of the edge to split.
      *

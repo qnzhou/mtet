@@ -483,6 +483,15 @@ public:
     size_t get_num_vertices() const { return m_vertices.size(); }
     size_t get_num_tets() const { return m_tets.size(); }
 
+    std::tuple<VertexId, EdgeId, EdgeId> split_edge(EdgeId edge_id)
+    {
+        TetKey key{value_of(edge_id)};
+        if (!m_tets.has_key(key)) {
+            throw std::runtime_error("Edge not found");
+        }
+        return split_edge(TetId(key), get_edge_index(key));
+    }
+
     std::tuple<VertexId, EdgeId, EdgeId> split_edge(TetId tet_id, uint8_t local_index)
     {
         if (local_index >= 6) {

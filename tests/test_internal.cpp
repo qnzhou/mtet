@@ -326,6 +326,33 @@ TEST_CASE("split_edge", "[mtet]")
             }
         }
     }
+
+    SECTION("case 5")
+    {
+        mtet::Scalar longest_edge_length = 0;
+        mtet::EdgeId longest_edge;
+        mesh.foreach_edge_in_tet(t0, [&](mtet::EdgeId eid, mtet::VertexId v0, mtet::VertexId v1) {
+            auto p0 = mesh.get_vertex(v0);
+            auto p1 = mesh.get_vertex(v1);
+            mtet::Scalar l = (p0[0] - p1[0]) * (p0[0] - p1[0]) + (p0[1] - p1[1]) * (p0[1] - p1[1]) +
+                             (p0[2] - p1[2]) * (p0[2] - p1[2]);
+            if (l > longest_edge_length) {
+                longest_edge_length = l;
+                longest_edge = eid;
+            }
+        });
+
+        REQUIRE(longest_edge_length == 2); // should be exact equal.
+        REQUIRE(mesh.has_edge(longest_edge));
+
+        auto [vid, eid0, eid1] = mesh.split_edge(longest_edge);
+        
+        REQUIRE(mesh.has_vertex(vid));
+        REQUIRE(mesh.has_edge(eid0));
+        REQUIRE(mesh.has_edge(eid1));
+        REQUIRE(!mesh.has_tet(t0));
+        REQUIRE(!mesh.has_edge(longest_edge));
+    }
 }
 
 TEST_CASE("foreach_edge_in_tet", "[mtet]")
