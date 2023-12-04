@@ -4,6 +4,11 @@
 
 namespace mtet {
 
+bool operator==(TetId t0, TetId t1)
+{
+    return is_same_tet(t0, t1);
+}
+
 MTetMesh::MTetMesh()
     : m_impl(nonstd::make_indirect_value<MTetMeshImpl>())
 {}
@@ -41,6 +46,11 @@ bool MTetMesh::has_tet(TetId tet_id) const
     return m_impl->has_tet(tet_id);
 }
 
+bool MTetMesh::has_edge(EdgeId edge_id) const
+{
+    return m_impl->has_edge(edge_id);
+}
+
 std::span<Scalar, 3> MTetMesh::get_vertex(VertexId vertex_id)
 {
     return m_impl->get_vertex(vertex_id);
@@ -59,6 +69,16 @@ std::span<VertexId, 4> MTetMesh::get_tet(TetId tet_id)
 std::span<const VertexId, 4> MTetMesh::get_tet(TetId tet_id) const
 {
     return m_impl->get_tet(tet_id);
+}
+
+std::array<VertexId, 2> MTetMesh::get_edge_vertices(EdgeId edge_id) const
+{
+    return m_impl->get_edge_vertices(edge_id);
+}
+
+TetId MTetMesh::get_edge_tet(EdgeId edge_id) const
+{
+    return m_impl->get_edge_tet(edge_id);
 }
 
 size_t MTetMesh::get_num_vertices() const
@@ -98,6 +118,19 @@ void MTetMesh::seq_foreach_tet(
     const std::function<void(TetId, std::span<const VertexId, 4>)>& func) const
 {
     m_impl->seq_foreach_tet(func);
+}
+
+void MTetMesh::foreach_edge_in_tet(
+    TetId tet_id,
+    const std::function<void(EdgeId, VertexId, VertexId)>& callback)
+{
+    m_impl->foreach_edge_in_tet(tet_id, callback);
+}
+
+void MTetMesh::foreach_tet_around_edge(EdgeId edge_id, const std::function<void(TetId)>& callback)
+    const
+{
+    m_impl->foreach_tet_around_edge(edge_id, callback);
 }
 
 } // namespace mtet

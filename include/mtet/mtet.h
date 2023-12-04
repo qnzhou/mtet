@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <functional>
 #include <span>
 
@@ -15,7 +16,10 @@ class MTetMeshImpl;
 using VertexId =
     strong::type<uint64_t, struct VertexId_, strong::equality, strong::default_constructible>;
 using TetId = strong::type<uint64_t, struct TetId_, strong::default_constructible>;
-using EdgeId = strong::type<uint64_t, struct EdgeId_>;
+using EdgeId = strong::type<uint64_t, struct EdgeId_, strong::default_constructible>;
+
+bool operator==(TetId t0, TetId t1);
+bool operator==(EdgeId e0, EdgeId e1);
 
 class MTetMesh
 {
@@ -37,12 +41,20 @@ public:
 public:
     bool has_vertex(VertexId vertex_id) const;
     bool has_tet(TetId tet_id) const;
+    bool has_edge(EdgeId edge_id) const;
 
     std::span<Scalar, 3> get_vertex(VertexId vertex_id);
     std::span<VertexId, 4> get_tet(TetId tet_id);
 
     std::span<const Scalar, 3> get_vertex(VertexId vertex_id) const;
     std::span<const VertexId, 4> get_tet(TetId tet_id) const;
+
+    std::array<VertexId, 2> get_edge_vertices(EdgeId edge_id) const;
+
+    /**
+     * Get a tet that contains the given edge.
+     */
+    TetId get_edge_tet(EdgeId edge_id) const;
 
     size_t get_num_vertices() const;
     size_t get_num_tets() const;
@@ -86,6 +98,7 @@ public:
      */
     std::tuple<VertexId, EdgeId, EdgeId> split_edge(TetId tet_id, uint8_t local_edge_id);
 
+public:
     void par_foreach_vertex(
         const std::function<void(VertexId, std::span<const Scalar, 3>)>& callback) const;
     void seq_foreach_vertex(
@@ -94,6 +107,10 @@ public:
         const std::function<void(TetId, std::span<const VertexId, 4>)>& callback) const;
     void seq_foreach_tet(
         const std::function<void(TetId, std::span<const VertexId, 4>)>& callback) const;
+    void foreach_edge_in_tet(
+        TetId tet_id,
+        const std::function<void(EdgeId, VertexId, VertexId)>& callback);
+    void foreach_tet_around_edge(EdgeId edge_id, const std::function<void(TetId)>& callback) const;
 
 private:
     nonstd::indirect_value<MTetMeshImpl> m_impl;

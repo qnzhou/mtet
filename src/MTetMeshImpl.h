@@ -27,6 +27,9 @@ using MVertex = std::array<Scalar, 3>;
 constexpr VertexId invalid_vertex_id = VertexId(invalid_key);
 constexpr TetId invalid_tet_id = TetId(invalid_key);
 
+constexpr std::array<std::array<uint8_t, 4>, 6> edge_map = {
+    {{0, 1, 2, 3}, {1, 2, 0, 3}, {2, 0, 1, 3}, {0, 3, 1, 2}, {1, 3, 2, 0}, {2, 3, 0, 1}}};
+
 /**
  * Tet data structrue.
  */
@@ -381,7 +384,7 @@ public:
          * @param tet_id  The id of the current tet.
          */
         auto process_tet = [&](TetId tet_id) {
-            assert(m_tets.has_key(tet_id));
+            assert(has_tet(tet_id));
 
             process_tet_triangle(tet_id, 0);
             process_tet_triangle(tet_id, 1);
@@ -407,6 +410,12 @@ public:
     {
         TetKey key{value_of(tet_id)};
         return m_tets.has_key(key);
+    }
+
+    bool has_edge(EdgeId edge_id) const
+    {
+        TetKey key{value_of(edge_id)};
+        return m_tets.has_key(key) && get_edge_index(key) < 6;
     }
 
     std::span<Scalar, 3> get_vertex(VertexId vertex_id)
@@ -453,6 +462,24 @@ public:
         }
     }
 
+    std::array<VertexId, 2> get_edge_vertices(EdgeId edge_id) const
+    {
+        TetKey key{value_of(edge_id)};
+        if (!m_tets.has_key(key)) {
+            throw std::runtime_error("Edge not found");
+        }
+        const auto& tet = *m_tets.get(key);
+        const auto& local_indices = edge_map[get_edge_index(key)];
+        return {tet.vertices[local_indices[0]], tet.vertices[local_indices[1]]};
+    }
+
+    TetId get_edge_tet(EdgeId edge_id) const
+    {
+        TetKey key{value_of(edge_id)};
+        key.set_tag(0);
+        return TetId(key);
+    }
+
     size_t get_num_vertices() const { return m_vertices.size(); }
     size_t get_num_tets() const { return m_tets.size(); }
 
@@ -461,50 +488,6 @@ public:
         if (local_index >= 6) {
             throw std::runtime_error("Invalid local index");
         }
-        constexpr std::array<std::array<uint8_t, 4>, 6> edge_map = {
-            {{0, 1, 2, 3}, {1, 2, 0, 3}, {2, 0, 1, 3}, {0, 3, 1, 2}, {1, 3, 2, 0}, {2, 3, 0, 1}}};
-
-        /**
-         * Get the next tet adjacent to the current tet around a given edge.
-         *
-         * @param curr_tet_id  The id of the current tet.
-         * @param llv0         The local index of the tet.
-         * @param llv1         The local index of the tet.
-         * @param llv2         The local index of the tet.
-         * @param llv3         The local index of the tet.
-         *
-         * The local indices llv0 and llv1 specifies the edge that we are traversing around.
-         * The local index llv3 specifies the vertex that is opposite to the face shared by the
-         * current tet and the next tet.
-         *
-         * @return The id of the next tet as well as the consistent local indices of the next tet.
-         */
-        auto get_next_tet_id =
-            [&](TetId curr_tet_id, uint8_t llv0, uint8_t llv1, uint8_t llv2, uint8_t llv3) {
-                TetKey curr_tet_key(value_of(curr_tet_id));
-                assert(m_tets.has_key(curr_tet_key));
-                assert(llv0 < 4);
-                assert(llv1 < 4);
-                assert(llv2 < 4);
-                assert(llv3 < 4);
-                assert(llv0 != llv1);
-                assert(llv0 != llv2);
-                assert(llv0 != llv3);
-                assert(llv1 != llv2);
-                assert(llv1 != llv3);
-                assert(llv2 != llv3);
-
-                const auto& curr_tet = *m_tets.get(curr_tet_key);
-                TetId next_tet_id = curr_tet.mirrors[llv3];
-                TetKey next_tet_key = TetKey(value_of(next_tet_id));
-                llv0 = get_mirror_index(next_tet_key, llv0);
-                llv1 = get_mirror_index(next_tet_key, llv1);
-                llv2 = get_mirror_index(next_tet_key, llv2);
-                llv3 = get_mirror_index(next_tet_key, llv3);
-
-                // Note that we swap llv2 and llv3 here intentionally.
-                return std::make_tuple(next_tet_id, llv0, llv1, llv3, llv2);
-            };
 
 
         /**
@@ -594,7 +577,7 @@ public:
             }
             if (value_of(o1_id) != invalid_key) {
                 TetKey o1_key = TetKey(value_of(o1_id));
-                assert(m_tets.has_key(o1_id));
+                assert(m_tets.has_key(o1_key));
                 auto& tet_o1 = *m_tets.get(o1_key);
                 auto o1_llv1 = get_mirror_index(o1_key, llv1);
                 auto old_t1_mirror_key = TetKey(value_of(tet_o1.mirrors[o1_llv1]));
@@ -653,8 +636,8 @@ public:
             // Current key should hold a valid key that serve as the first tet to traverse in the
             // lv3 direction. lv0 to lv3 should be valid local indices for curr_key.
             assert(has_tet(curr_id));
-            assert(get_vertex(curr_id)[lv0] == v0_id);
-            assert(get_vertex(curr_id)[lv1] == v1_id);
+            assert(get_tet(curr_id)[lv0] == v0_id);
+            assert(get_tet(curr_id)[lv1] == v1_id);
 
             // Gather 1-ring tets around the edge
             llvm_vecsmall::SmallVector<TetId, 16> old_one_ring, new_one_ring_0, new_one_ring_1;
@@ -817,6 +800,70 @@ public:
         }
     }
 
+    void foreach_edge_in_tet(
+        TetId tet_id,
+        const std::function<void(EdgeId, VertexId, VertexId)>& callback)
+    {
+        TetKey tet_key(value_of(tet_id));
+        tet_key.set_tag(0);
+        if (!m_tets.has_key(tet_key)) {
+            throw std::runtime_error("Tet not found");
+        }
+        const auto& tet = *m_tets.get(tet_key);
+        for (uint8_t i = 0; i < 6; i++) {
+            set_edge_index(tet_key, i);
+            const auto& lv = edge_map[i];
+            callback(EdgeId(tet_key), tet.vertices[lv[0]], tet.vertices[lv[1]]);
+        }
+    }
+
+    void foreach_tet_around_edge(EdgeId edge_id, const std::function<void(TetId)>& callback) const
+    {
+        TetKey tet_key(value_of(edge_id));
+        if (!m_tets.has_key(tet_key)) {
+            throw std::runtime_error("Edge not found");
+        }
+
+        uint8_t lv0, lv1, lv2, lv3;
+        std::tie(lv0, lv1, lv2, lv3) = edge_map[get_edge_index(tet_key)];
+
+        tet_key.set_tag(0);
+        TetId tet_id(tet_key);
+
+        // Compute the staring tet if the edge is on the boundary.
+        TetId curr_id = tet_id;
+        bool on_boundary = false;
+        do {
+            TetKey curr_key = TetKey(value_of(curr_id));
+            assert(curr_key != invalid_key);
+
+            TetId next_id;
+            uint8_t llv0, llv1, llv2, llv3;
+            // Note that we are traversing in the lv2 direction. I.e. the next tet is the tet
+            // opposite to the lv2 vertex.
+            std::tie(next_id, llv0, llv1, llv3, llv2) =
+                get_next_tet_id(curr_id, lv0, lv1, lv3, lv2);
+            if (TetKey(value_of(next_id)) == invalid_key) {
+                on_boundary = true;
+                break;
+            }
+            curr_id = next_id;
+            lv0 = llv0;
+            lv1 = llv1;
+            lv2 = llv2;
+            lv3 = llv3;
+        } while (!is_same_tet(curr_id, tet_id));
+        assert(!is_invalid_tet(curr_id));
+
+        // Iterator over all tets adjacent to the edge and call the callback.
+        TetId init_id = curr_id;
+        do {
+            callback(curr_id);
+            std::tie(curr_id, lv0, lv1, lv2, lv3) = get_next_tet_id(curr_id, lv0, lv1, lv2, lv3);
+        } while (!is_invalid_tet(curr_id) && !is_same_tet(init_id, curr_id));
+    }
+
+
 public:
     /**
      * Internal: get the adjacent tet of a tet across one of its triangles.
@@ -839,6 +886,51 @@ public:
 
     const auto& get_vertices() const { return m_vertices; }
     const auto& get_tets() const { return m_tets; }
+
+private:
+    /**
+     * Get the next tet adjacent to the current tet around a given edge.
+     *
+     * @param curr_tet_id  The id of the current tet.
+     * @param llv0         The local index of the tet.
+     * @param llv1         The local index of the tet.
+     * @param llv2         The local index of the tet.
+     * @param llv3         The local index of the tet.
+     *
+     * The local indices llv0 and llv1 specifies the edge that we are traversing around.
+     * The local index llv3 specifies the vertex that is opposite to the face shared by the
+     * current tet and the next tet.
+     *
+     * @return The id of the next tet as well as the consistent local indices of the next tet.
+     */
+    std::tuple<TetId, uint8_t, uint8_t, uint8_t, uint8_t>
+    get_next_tet_id(TetId curr_tet_id, uint8_t llv0, uint8_t llv1, uint8_t llv2, uint8_t llv3) const
+    {
+        TetKey curr_tet_key(value_of(curr_tet_id));
+        assert(m_tets.has_key(curr_tet_key));
+        assert(llv0 < 4);
+        assert(llv1 < 4);
+        assert(llv2 < 4);
+        assert(llv3 < 4);
+        assert(llv0 != llv1);
+        assert(llv0 != llv2);
+        assert(llv0 != llv3);
+        assert(llv1 != llv2);
+        assert(llv1 != llv3);
+        assert(llv2 != llv3);
+
+        const auto& curr_tet = *m_tets.get(curr_tet_key);
+        TetId next_tet_id = curr_tet.mirrors[llv3];
+        TetKey next_tet_key = TetKey(value_of(next_tet_id));
+        llv0 = get_mirror_index(next_tet_key, llv0);
+        llv1 = get_mirror_index(next_tet_key, llv1);
+        llv2 = get_mirror_index(next_tet_key, llv2);
+        llv3 = get_mirror_index(next_tet_key, llv3);
+
+        // Note that we swap llv2 and llv3 here intentionally.
+        return std::make_tuple(next_tet_id, llv0, llv1, llv3, llv2);
+    }
+
 
 private:
     VertexMap m_vertices;

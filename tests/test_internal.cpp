@@ -315,8 +315,9 @@ TEST_CASE("split_edge", "[mtet]")
             size_t num_tets = mesh.get_num_tets();
             REQUIRE(num_tets > 0);
             tet_ids.reserve(num_tets);
-            mesh.seq_foreach_tet(
-                [&](mtet::TetId tet_id, std::span<const mtet::VertexId, 4>) { tet_ids.push_back(tet_id); });
+            mesh.seq_foreach_tet([&](mtet::TetId tet_id, std::span<const mtet::VertexId, 4>) {
+                tet_ids.push_back(tet_id);
+            });
             for (auto tet_id : tet_ids) {
                 if (mesh.has_tet(tet_id)) {
                     mesh.split_edge(tet_id, i % 6);
@@ -325,5 +326,27 @@ TEST_CASE("split_edge", "[mtet]")
             }
         }
     }
+}
+
+TEST_CASE("foreach_edge_in_tet", "[mtet]")
+{
+    mtet::MTetMeshImpl mesh;
+    auto v0 = mesh.add_vertex(0, 0, 0);
+    auto v1 = mesh.add_vertex(1, 0, 0);
+    auto v2 = mesh.add_vertex(0, 1, 0);
+    auto v3 = mesh.add_vertex(0, 0, 1);
+    auto t0 = mesh.add_tet(v0, v1, v2, v3);
+    mesh.initialize_connectivity();
+
+    mesh.foreach_edge_in_tet(t0, [&](mtet::EdgeId edge_id, mtet::VertexId v0, mtet::VertexId v1) {
+        REQUIRE(mesh.has_edge(edge_id));
+        REQUIRE(mesh.has_vertex(v0));
+        REQUIRE(mesh.has_vertex(v1));
+        auto ev = mesh.get_edge_vertices(edge_id);
+        REQUIRE(ev[0] == v0);
+        REQUIRE(ev[1] == v1);
+        auto tet_id = mesh.get_edge_tet(edge_id);
+        REQUIRE(mesh.has_tet(tet_id));
+    });
 }
 
