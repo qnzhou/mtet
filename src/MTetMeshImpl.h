@@ -393,7 +393,7 @@ public:
         };
 
         dr::parallel_for(dr::blocked_range<size_t>(0, n, 1), [&](dr::blocked_range<size_t> range) {
-            for (size_t i = range.begin(); i != range.end(); ++i) {
+            for (auto i = range.begin(); i != range.end(); ++i) {
                 process_tet(tet_ids[i]);
             }
         });
