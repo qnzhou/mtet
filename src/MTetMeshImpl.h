@@ -833,8 +833,8 @@ public:
             throw std::runtime_error("Edge not found");
         }
 
-        uint8_t lv0, lv1, lv2, lv3;
-        std::tie(lv0, lv1, lv2, lv3) = edge_map[get_edge_index(tet_key)];
+        auto lvs = edge_map[get_edge_index(tet_key)];
+        uint8_t lv0 = lvs[0], lv1 = lvs[1], lv2 = lvs[2], lv3 = lvs[3];
 
         tet_key.set_tag(0);
         TetId tet_id(tet_key);

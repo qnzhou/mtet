@@ -12,7 +12,7 @@ CPMAddPackage(
   DOWNLOAD_ONLY YES
 )
 
-add_subdirectory(${slot_map_SOURCE_DIR}/slot_map)
+add_subdirectory(${slot_map_SOURCE_DIR}/slot_map ${slot_map_BINARY_DIR})
 set_target_properties(slot_map PROPERTIES SYSTEM ON)
 set_target_properties(slot_map PROPERTIES FOLDER third_party)
 add_library(slot_map::slot_map ALIAS slot_map)
