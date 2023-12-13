@@ -52,6 +52,14 @@ if(MTET_BUILD_TESTS)
     target_compile_definitions(mtet_tests PRIVATE CATCH_CONFIG_ENABLE_BENCHMARKING)
     target_compile_features(mtet_tests PRIVATE cxx_std_20)
 
+    if (WIN32)
+        add_custom_command(
+            TARGET mtet_tests POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE_DIR:nanothread>/nanothread.dll
+            $<TARGET_FILE_DIR:mtet_tests>)
+    endif()
+
     catch_discover_tests(mtet_tests)
 endif()
 
@@ -59,4 +67,12 @@ if (MTET_BUILD_EXAMPLES)
     add_executable(longest_edge_split ${CMAKE_CURRENT_LIST_DIR}/examples/longest_edge_split.cpp)
     target_link_libraries(longest_edge_split PRIVATE mtet::mtet)
     target_compile_features(longest_edge_split PRIVATE cxx_std_20)
+
+    if (WIN32)
+        add_custom_command(
+            TARGET longest_edge_split POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE_DIR:nanothread>/nanothread.dll
+            $<TARGET_FILE_DIR:longest_edge_split>)
+    endif()
 endif()
