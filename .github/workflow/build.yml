@@ -1,0 +1,33 @@
+name: build and test
+
+on: [push]
+
+jobs:
+    build-Ubuntu:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: build
+              run: |
+                  mkdir build
+                  cd build
+                  cmake .. -DMTET_BUILD_TESTS=On -DCMAKE_BUILD_TYPE=Release
+                  cmake --build . --config Release -j
+            - name: test
+              run: cmake --build build --target test
+            - name: benchmark
+              run: build/mtet_tests benchmark
+    build-Windows:
+        runs-on: windows-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: build
+              run: |
+                  mkdir build
+                  cd build
+                  cmake .. -DCMAKE_GENERATOR_PLATFORM=x64 -DMTET_BUILD_TESTS=On
+                  cmake --build . --config Release -j
+            - name: test
+              run: cmake --build build --target RUN_TESTS
+            - name: benchmark
+              run: build/Release/mtet_tests.exe benchmark
