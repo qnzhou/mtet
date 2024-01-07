@@ -1,0 +1,23 @@
+build-backend = "setuptools.build_meta"
+
+[build-system]
+requires = [
+    "scikit-build-core==0.5.1",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "mtet"
+maintainers = [{name = "Qingnan Zhou", email = "qnzhou@gmail.com"}]
+description = "A mini tetrahedral mesh library."
+readme = "README.md"
+version = "0.0.1"
+requires-python = ">=3.9"
+
+[tool.scikit-build]
+install.components = ["MTet_Python_Runtime"]
+wheel.packages = ["python/mtet"]
+cmake.build-type = "Release"
+
+[tool.scikit-build.cmake.define]
+MTET_BUILD_PYTHON_BINDING = true

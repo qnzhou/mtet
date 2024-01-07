@@ -81,6 +81,11 @@ TetId MTetMesh::get_edge_tet(EdgeId edge_id) const
     return m_impl->get_edge_tet(edge_id);
 }
 
+TetId MTetMesh::get_mirror(TetId tet_id, uint8_t local_index) const
+{
+    return m_impl->get_mirror(tet_id, local_index);
+}
+
 size_t MTetMesh::get_num_vertices() const
 {
     return m_impl->get_num_vertices();

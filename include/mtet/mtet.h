@@ -56,6 +56,11 @@ public:
      */
     TetId get_edge_tet(EdgeId edge_id) const;
 
+    /**
+     * Get the mirror of a given tet with `tet_id` across its local face indexed by `local_index`.
+     */
+    TetId get_mirror(TetId tet_id, uint8_t local_index) const;
+
     size_t get_num_vertices() const;
     size_t get_num_tets() const;
 
