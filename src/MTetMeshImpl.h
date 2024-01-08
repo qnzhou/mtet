@@ -480,6 +480,18 @@ public:
         return TetId(key);
     }
 
+    TetId get_mirror(TetId tet_id, uint8_t local_index) const
+    {
+        TetKey key{value_of(tet_id)};
+        if (!m_tets.has_key(key)) {
+            throw std::runtime_error("Tet not found");
+        }
+        if (local_index >= 4) {
+            throw std::runtime_error("Invalid local index (must be in [0, 3])");
+        }
+        return TetId(m_tets.get(key)->mirrors[local_index]);
+    }
+
     size_t get_num_vertices() const { return m_vertices.size(); }
     size_t get_num_tets() const { return m_tets.size(); }
 

@@ -14,6 +14,7 @@ include(strong_type)
 
 option(MTET_BUILD_TESTS "Build tests" OFF)
 option(MTET_BUILD_EXAMPLES "Build examples" OFF)
+option(MTET_BUILD_PYTHON_BINDING "Build python binding" OFF)
 
 file(GLOB INC_FILES ${CMAKE_CURRENT_LIST_DIR}/include/*.h)
 file(GLOB SRC_FILES ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp)
@@ -75,4 +76,25 @@ if (MTET_BUILD_EXAMPLES)
             $<TARGET_FILE_DIR:nanothread>/nanothread.dll
             $<TARGET_FILE_DIR:longest_edge_split>)
     endif()
+endif()
+
+if (MTET_BUILD_PYTHON_BINDING)
+    if(SKBUILD)
+        if(APPLE)
+            set(CMAKE_INSTALL_RPATH @loader_path)
+        elseif(UNIX)
+            set(CMAKE_INSTALL_RPATH $ORIGIN)
+        endif()
+    endif()
+
+    include(nanobind)
+    include(fmt)
+    set(PY_SRC_FILE "${PROJECT_SOURCE_DIR}/python/pymtet.cpp")
+    nanobind_add_module(pymtet NB_STATIC ${PY_SRC_FILE})
+    target_compile_features(pymtet PRIVATE cxx_std_20)
+    target_link_libraries(pymtet PUBLIC mtet::mtet fmt::fmt)
+    install(TARGETS pymtet nanothread LIBRARY
+        COMPONENT MTet_Python_Runtime
+        DESTINATION ${SKBUILD_PLATLIB_DIR}/mtet)
+    add_library(mtet::pymtet ALIAS pymtet)
 endif()

@@ -9,7 +9,7 @@ namespace mtet {
 void save_mesh(std::string filename, const MTetMesh& mesh)
 {
     mshio::MshSpec spec;
-    spec.mesh_format.file_type = 0; // binary
+    spec.mesh_format.file_type = 1; // binary
 
     auto& nodes = spec.nodes;
     nodes.num_entity_blocks = 1;
