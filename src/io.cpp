@@ -99,7 +99,7 @@ void save_mesh(std::string filename, const MTetMesh& mesh, std::span<TetId> acti
 
     auto& elements = spec.elements;
     elements.num_entity_blocks = 1;
-    elements.num_elements = mesh.get_num_tets();
+    elements.num_elements = active_tets.size();
     elements.min_element_tag = 1;
     elements.max_element_tag = elements.num_elements;
     elements.entity_blocks.resize(1);
