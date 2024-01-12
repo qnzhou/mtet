@@ -100,5 +100,9 @@ NB_MODULE(pymtet, m)
         .def("foreach_tet_around_edge", &mtet::MTetMesh::foreach_tet_around_edge);
 
     m.def("load_mesh", &mtet::load_mesh);
-    m.def("save_mesh", &mtet::save_mesh);
+    m.def("save_mesh", nb::overload_cast<std::string, const mtet::MTetMesh&>(&mtet::save_mesh));
+    m.def(
+        "save_mesh",
+        nb::overload_cast<std::string, const mtet::MTetMesh&, std::span<mtet::TetId>>(
+            &mtet::save_mesh));
 }
