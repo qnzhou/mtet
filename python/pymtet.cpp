@@ -56,6 +56,10 @@ NB_MODULE(pymtet, m)
                 return {t[0], t[1], t[2], t[3]};
             })
         .def(
+            "get_edge",
+            &mtet::MTetMesh::get_edge
+            )
+        .def(
             "print",
             [](mtet::MTetMesh& self, mtet::TetId tet_id) {
                 auto vts = self.get_tet(tet_id);
