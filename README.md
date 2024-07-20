@@ -90,6 +90,24 @@ auto tfn = [](TetId tid) {
 mesh.foreach_tet_around_edge(eid, tfn);
 ```
 
+## Performance
+
+We use 1-to-1,000,000 tet mesh generation via sequential edge split as a benchmark.
+```sh
+$ ./mtet_tests benchmark
+```
+
+The following are the benchmark results measured on my MacBook Pro (2.4 GHz 8-Core Intel Core i9).
+```
+benchmark name                       samples       iterations    estimated
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+1-1M tets                                      100             1     32.5669 s
+                                        303.581 ms     300.74 ms     307.49 ms
+                                        16.8615 ms     12.811 ms    25.9629 ms
+```
+
 
 ## Technical details
 
