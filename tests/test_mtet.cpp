@@ -24,6 +24,12 @@ TEST_CASE("basics", "[mtet]")
     REQUIRE(mesh.get_num_vertices() == 4);
     REQUIRE(mesh.get_num_tets() == 1);
 
+    auto e0 = mesh.get_edge(t0, 0);
+    REQUIRE(mesh.has_edge(e0));
+    auto [v0_, v1_] = mesh.get_edge_vertices(e0);
+    REQUIRE(v0_ == v0);
+    REQUIRE(v1_ == v1);
+
     mesh.initialize_connectivity();
 
     mesh.split_edge(t0, 0);

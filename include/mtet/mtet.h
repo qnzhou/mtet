@@ -49,6 +49,7 @@ public:
     std::span<const Scalar, 3> get_vertex(VertexId vertex_id) const;
     std::span<const VertexId, 4> get_tet(TetId tet_id) const;
 
+    EdgeId get_edge(TetId tet_id, uint8_t local_index) const;
     std::array<VertexId, 2> get_edge_vertices(EdgeId edge_id) const;
 
     /**

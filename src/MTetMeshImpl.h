@@ -462,6 +462,18 @@ public:
         }
     }
 
+    EdgeId get_edge(TetId tet_id, uint8_t local_index) const
+    {
+        TetKey tet_key(value_of(tet_id));
+        auto ptr = m_tets.get(tet_key);
+        if (ptr == nullptr) {
+            throw std::runtime_error("Tet not found");
+        }
+
+        set_edge_index(tet_key, local_index);
+        return EdgeId(tet_key);
+    }
+
     std::array<VertexId, 2> get_edge_vertices(EdgeId edge_id) const
     {
         TetKey key{value_of(edge_id)};

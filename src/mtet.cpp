@@ -71,6 +71,11 @@ std::span<const VertexId, 4> MTetMesh::get_tet(TetId tet_id) const
     return m_impl->get_tet(tet_id);
 }
 
+EdgeId MTetMesh::get_edge(TetId tet_id, uint8_t local_index) const
+{
+    return m_impl->get_edge(tet_id, local_index);
+}
+
 std::array<VertexId, 2> MTetMesh::get_edge_vertices(EdgeId edge_id) const
 {
     return m_impl->get_edge_vertices(edge_id);
