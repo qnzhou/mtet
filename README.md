@@ -103,7 +103,8 @@ vertex-vertex "mirror correspondence" between the two facet-adjacent tets, all i
 motivated by the need of local mesh operations (e.g. edge collapse, split) which requires adjacent
 elements to be updated jointly.
 
-<img src="https://private-user-images.githubusercontent.com/3606672/350701233-04ecdf3a-4bbe-49d0-b3b5-d3e07a4c2516.svg?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3MjE0ODczMTAsIm5iZiI6MTcyMTQ4NzAxMCwicGF0aCI6Ii8zNjA2NjcyLzM1MDcwMTIzMy0wNGVjZGYzYS00YmJlLTQ5ZDAtYjNiNS1kM2UwN2E0YzI1MTYuc3ZnP1gtQW16LUFsZ29yaXRobT1BV1M0LUhNQUMtU0hBMjU2JlgtQW16LUNyZWRlbnRpYWw9QUtJQVZDT0RZTFNBNTNQUUs0WkElMkYyMDI0MDcyMCUyRnVzLWVhc3QtMSUyRnMzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyNDA3MjBUMTQ1MDEwWiZYLUFtei1FeHBpcmVzPTMwMCZYLUFtei1TaWduYXR1cmU9MTBlYjhhNTYxNGIzODEwMWE5YzEwY2Q0MzI2MWMwNmVkNzc1OTA1YWY4YTBmNDVmNDg5ZTNkYWU3Njk3ZDZkZSZYLUFtei1TaWduZWRIZWFkZXJzPWhvc3QmYWN0b3JfaWQ9MCZrZXlfaWQ9MCZyZXBvX2lkPTAifQ.JfuDtz3K2BaipqurOxPt5OOWm9b54xLQF0kYM9jKzNo" width="50%"/>
+
+<img src=https://github.com/user-attachments/assets/573112c4-c9e2-4619-9cbc-97b5e98a375e width=50% />
 
 In the above example, two adjacent tets are shown. The left tet has vertices `v0`, `v1`, `v2` and
 `v3`. The right tet has vertices `u0`, `u1`, `u2` and `u3`. The mirror correspondence of local vertices between
