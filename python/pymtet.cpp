@@ -7,6 +7,7 @@
 #include <nanobind/stl/function.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
+#include <nanobind/stl/vector.h>
 
 #include <fmt/core.h>
 #include <span>
@@ -15,6 +16,8 @@ namespace nb = nanobind;
 
 NB_MODULE(pymtet, m)
 {
+    using namespace nb::literals;
+
     nb::class_<mtet::VertexId>(m, "VertexId")
         .def(nb::init<>())
         .def_prop_ro("value", [](mtet::VertexId& self) { return value_of(self); })
@@ -55,10 +58,7 @@ NB_MODULE(pymtet, m)
                 auto t = self.get_tet(tet_id);
                 return {t[0], t[1], t[2], t[3]};
             })
-        .def(
-            "get_edge",
-            &mtet::MTetMesh::get_edge
-            )
+        .def("get_edge", &mtet::MTetMesh::get_edge)
         .def(
             "print",
             [](mtet::MTetMesh& self, mtet::TetId tet_id) {
@@ -109,4 +109,16 @@ NB_MODULE(pymtet, m)
         "save_mesh",
         nb::overload_cast<std::string, const mtet::MTetMesh&, std::span<mtet::TetId>>(
             &mtet::save_mesh));
+    m.def(
+        "save_mesh",
+        [](std::string filename,
+           const mtet::MTetMesh& mesh,
+           std::string name,
+           std::vector<mtet::Scalar>& values) {
+            mtet::save_mesh(filename, mesh, name, {values.data(), values.size()});
+        },
+        "filename"_a,
+        "mesh"_a,
+        "name"_a,
+        "values"_a);
 }

@@ -6,7 +6,9 @@
 #include <cassert>
 
 namespace mtet {
-void save_mesh(std::string filename, const MTetMesh& mesh)
+
+namespace internal {
+mshio::MshSpec generate_spec(const MTetMesh& mesh)
 {
     mshio::MshSpec spec;
     spec.mesh_format.file_type = 1; // binary
@@ -63,6 +65,33 @@ void save_mesh(std::string filename, const MTetMesh& mesh)
         tet_tag++;
     });
 
+    return spec;
+}
+
+void add_scalar_field(mshio::MshSpec& spec, std::string name, std::span<Scalar> field)
+{
+    mshio::Data node_data;
+    node_data.header.string_tags.push_back(name);
+    node_data.header.int_tags.push_back(0);
+    node_data.header.int_tags.push_back(1);
+    node_data.header.int_tags.push_back(field.size());
+
+    auto& entries = node_data.entries;
+    entries.resize(field.size());
+    for (size_t i=0; i<field.size(); i++) {
+        auto& entry = entries[i];
+        entry.tag = i+1;
+        entry.data = {field[i]};
+    }
+
+    spec.node_data.push_back(std::move(node_data));
+}
+
+} // namespace internal
+
+void save_mesh(std::string filename, const MTetMesh& mesh)
+{
+    mshio::MshSpec spec = internal::generate_spec(mesh);
     mshio::save_msh(filename, spec);
 }
 
@@ -125,6 +154,17 @@ void save_mesh(std::string filename, const MTetMesh& mesh, std::span<TetId> acti
         tet_tag++;
     }
 
+    mshio::save_msh(filename, spec);
+}
+
+void save_mesh(
+    std::string filename,
+    const MTetMesh& mesh,
+    std::string scalar_field_name,
+    std::span<Scalar> scalar_field)
+{
+    mshio::MshSpec spec = internal::generate_spec(mesh);
+    internal::add_scalar_field(spec, scalar_field_name, scalar_field);
     mshio::save_msh(filename, spec);
 }
 
