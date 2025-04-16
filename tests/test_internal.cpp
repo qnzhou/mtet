@@ -9,7 +9,10 @@ void validate_mesh(const mtet::MTetMeshImpl& mesh)
     using VertexId = mtet::VertexId;
     using TetId = mtet::TetId;
 
-    mesh.par_foreach_tet([&](TetId tet_id, std::span<const VertexId, 4> tet_vertices) {
+    // Note: Catch2's assertion macros are not thread-safe:
+    // https://github.com/catchorg/Catch2/blob/devel/docs/limitations.md#thread-safe-assertions
+    // Thus, we have to use the sequential version of the foreach function.
+    mesh.seq_foreach_tet([&](TetId tet_id, std::span<const VertexId, 4> tet_vertices) {
         using VertexKey = mtet::MTetMeshImpl::VertexKey;
         using TetKey = mtet::MTetMeshImpl::TetKey;
         TetKey key(value_of(tet_id));

@@ -8,7 +8,7 @@ include(CPM)
 CPMAddPackage(
   NAME nanothread
   GITHUB_REPOSITORY mitsuba-renderer/nanothread
-  GIT_TAG 9073b959f02da3395cdae8ed7e0e0f86b1c2ddb8
+  GIT_TAG e76778dca2bad7e399cc9e408e371dc73569e125
 )
 
 set_target_properties(nanothread PROPERTIES FOLDER third_party)
