@@ -1,19 +1,19 @@
 # MTet: A Mini Tetrahedral Mesh Data Structure
 
-MTet is mini tetrahedral mesh data structure in C++. It is written by Qingnan Zhou for the Siggraph
+MTet is a mini tetrahedral mesh data structure in C++. It was written by Qingnan Zhou for the SIGGRAPH
 2024 paper "[Adaptive Grid Generation for Discretizing Implicit
 Complexes](https://jurwen.github.io/Adaptive-grid-for-implicit-complexes/)".
 
 ## Features
 
-* Tet key with mirror indices for efficient storage of local vertex-vertex correspondence between adjacent tets.
-* O(1) worst-case vertex/tet creation and access based on [slot map](https://github.com/SergeyMakeev/slot_map).
+* Tet keys with mirror indices for efficient storage of local vertex-vertex correspondence between adjacent tets.
+* O(1) worst-case vertex/tet creation and access based on [slot maps](https://github.com/SergeyMakeev/slot_map).
 * Efficient edge split support.
-* Strong index [type safety](https://github.com/rollbear/strong_type).
+* [Strongly typed](https://github.com/rollbear/strong_type) index for type safety.
 
 ## Quick start
 
-To create tet mesh with a single tet:
+To create a tet mesh with a single tet:
 
 ```cpp
 #include <mtet/mtet.h>
@@ -64,18 +64,18 @@ auto vfn = [](VertexId vid, std::span<const Scalar, 3> position) {
     // Do something with the vertex.
 };
 
-mesh.par_foreach_vertex(vfn); // pararllel vertex callback.
+mesh.par_foreach_vertex(vfn); // parallel vertex callback.
 mesh.seq_foreach_vertex(vfn); // sequential vertex callback.
 
 auto tfn = [](TetId tid, std::span<const VertexId, 4> vts) {
     // Do something with the tet.
 };
 
-mesh.par_foreach_tet(tfn); // pararllel tet callback.
+mesh.par_foreach_tet(tfn); // parallel tet callback.
 mesh.seq_foreach_tet(tfn); // sequential tet callback.
 ```
 
-Similarly, once can use callback functions sequentially for each edges within a tet and for each tet
+Similarly, one can use callback functions sequentially for each edge within a tet and for each tet
 around an edge:
 
 ```cpp
@@ -111,14 +111,14 @@ benchmark name                       samples       iterations    estimated
 
 ## Technical details
 
-The following contains some technical details about the data structure design. It serves more like a
+The following section contains some technical details about the data structure design. It serves more like a
 note for developers, and it is not necessary to understand these details to use the library.
 
 ### Mirror index
 
-Mirror index is a small data structure that stores both tet-tet adjacency as well as the local
+Mirror index is a small data structure that stores both tet-tet adjacency and the local
 vertex-vertex "mirror correspondence" between the two facet-adjacent tets, all in a 64-bit integer. It is
-motivated by the need of local mesh operations (e.g. edge collapse, split) which requires adjacent
+motivated by the need for local mesh operations (e.g. edge collapse, split) which requires adjacent
 elements to be updated jointly.
 
 
@@ -136,7 +136,7 @@ these two tets are the following:
 | 3 | 2 |
 
 With mirror correspondence, we can quickly identify the local index of the shared vertex/edge/facet
-between adjacent tets. For example, edge (`v2`, `v3`) in the first tet is the same as edge (`u1`,
+between adjacent tets. For example, the edge (`v2`, `v3`) in the first tet is the same as edge (`u1`,
 `u2`) in the second tet. Since the valid range of a local vertex index is from 0 to 3, it can be
 stored in 2 bits, and we can pack all four local vertex indices into the tags of a 64-bit tet slot
 map key.
@@ -159,7 +159,7 @@ Tet key:
 We call such tet key with local mirror correspondence a "mirror index". Since each tet can have at
 most 4 facet-adjacent tets, we only need 4 mirror indices to store the complete correspondence with
 all facet-adjacent tets. If a tet is on the boundary, one or more of its facets are boundary facets.
-We use a special invalid tet key as mirror index to indicate the corresponding tet facet is a
+We use a special invalid tet key as the mirror index to indicate the corresponding tet facet is a
 boundary facet. A total of 4x64=256 bits are needed to store all 4 mirror indices, which is much
 smaller than half-edge/half-face data structure.
 
@@ -167,12 +167,12 @@ smaller than half-edge/half-face data structure.
 
 Note that in addition to using tet key as mirror index. We can also use tet key to just specify a
 particular tet or an edge of that tet depending on the context. We use [strong
-type](https://github.com/rollbear/strong_type) to distinguish the different uses case. The type
+typing](https://github.com/rollbear/strong_type) to distinguish the different use cases. The type
 `TetId` is used to specify a tet or a mirror index, `EdgeId` is used to specify an edge.
 
 When specifying an edge using `EdgeId`, the index part of the tet key yields a tet containing the
 target edge, and the local edge index part of the tet key specifies the local edge index within that
-tet. The local edge index convention is illustrated bellow:
+tet. The local edge index convention is illustrated below:
 
 ```
                    v2
