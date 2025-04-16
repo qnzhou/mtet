@@ -11,4 +11,6 @@ CPMAddPackage(
   GIT_TAG 10.2.1
 )
 
-set_target_properties(fmt PROPERTIES FOLDER third_party)
+set_target_properties(fmt PROPERTIES
+    FOLDER third_party
+    POSITION_INDEPENDENT_CODE ON)

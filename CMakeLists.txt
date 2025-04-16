@@ -34,6 +34,7 @@ target_link_libraries(mtet PRIVATE
 )
 add_library(mtet::mtet ALIAS mtet)
 target_compile_features(mtet PRIVATE cxx_std_20)
+set_target_properties(mtet PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 if(MTET_BUILD_TESTS)
     include(CTest)
