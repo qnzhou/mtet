@@ -31,7 +31,7 @@ constexpr std::array<std::array<uint8_t, 4>, 6> edge_map = {
     {{0, 1, 2, 3}, {1, 2, 0, 3}, {2, 0, 1, 3}, {0, 3, 1, 2}, {1, 3, 2, 0}, {2, 3, 0, 1}}};
 
 /**
- * Tet data structrue.
+ * Tet data structure.
  */
 struct MTet
 {
@@ -55,7 +55,7 @@ struct MTet
 /**
  * Triangle hash function.
  *
- * This hash function is agnostic to the vertex order and triangle orientation. I.e. all the of the
+ * This hash function is agnostic to the vertex order and triangle orientation. I.e. all of the
  * following triangles will have the same hash: [0, 1, 2], [1, 2, 0], [2, 1, 0].
  */
 struct TriangleHash
@@ -73,7 +73,7 @@ struct TriangleHash
 /**
  * Triangle equality function.
  *
- * This hash function is agnostic to the vertex order and triangle orientation. I.e. all the of the
+ * This hash function is agnostic to the vertex order and triangle orientation. I.e. all of the
  * following triangles are considered as equal: [0, 1, 2], [1, 2, 0], [2, 1, 0].
  */
 struct TriangleEqual
@@ -147,7 +147,7 @@ inline void set_edge_index(dod::slot_map<MTet>::key& key, uint8_t edge_index)
 }
 
 /**
- * Se the local edge index in a key.
+ * Set the local edge index in a key.
  *
  * @param key[in/out] The target tet id.
  * @param lv0          The first local vertex index of the edge.
@@ -330,7 +330,7 @@ public:
          * Compute the mirror mapping of an adjacent tet with the current tet.
          *
          * @param tet_id     The id of the current tet.
-         * @param local_fid  The local face id of the current tet, which is shared with the adjcent
+         * @param local_fid  The local face id of the current tet, which is shared with the adjacent
          *                   tet.
          *
          * The current tet will be updated with the correct mirror mapping for this adjacency.
@@ -641,7 +641,7 @@ public:
             const auto vm_id =
                 add_vertex((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, (p0[2] + p1[2]) / 2);
 
-            // Compute the staring tet if the edge is on the boundary.
+            // Compute the starting tet if the edge is on the boundary.
             TetId curr_id = tet_id;
             bool on_boundary = false;
             do {
