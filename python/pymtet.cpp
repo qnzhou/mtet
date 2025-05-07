@@ -1,3 +1,4 @@
+#include <mtet/grid.h>
 #include <mtet/io.h>
 #include <mtet/mtet.h>
 
@@ -121,4 +122,31 @@ NB_MODULE(pymtet, m)
         "mesh"_a,
         "name"_a,
         "values"_a);
+
+    m.def(
+        "generate_tet_grid",
+        [](const std::array<size_t, 3>& resolution,
+           const std::array<float, 3>& bbox_min,
+           const std::array<float, 3>& bbox_max,
+           int style) {
+            mtet::GridStyle grid_style = mtet::GridStyle::TET5;
+            switch (style) {
+            case 5: grid_style = mtet::GridStyle::TET5; break;
+            case 6: grid_style = mtet::GridStyle::TET6; break;
+            default: throw std::invalid_argument("Invalid style. Use 5 or 6.");
+            }
+            return mtet::generate_tet_grid(resolution, bbox_min, bbox_max, grid_style);
+        },
+        "resolution"_a,
+        "bbox_min"_a = std::array<float, 3>{0.0f, 0.0f, 0.0f},
+        "bbox_max"_a = std::array<float, 3>{1.0f, 1.0f, 1.0f},
+        "style"_a = 5,
+        R"(Generate a tetrahedral grid with the specified resolution and bounding box.
+
+@param resolution The number of divisions along each axis (x, y, z).
+@param bbox_min The minimum coordinates of the bounding box.
+@param bbox_max The maximum coordinates of the bounding box.
+@param style The style of the tetrahedral mesh (5 or 6).
+
+@return A tetrahedral mesh object.)" );
 }
