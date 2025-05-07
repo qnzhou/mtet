@@ -21,3 +21,21 @@ class TestMTet:
         assert mesh.has_tet(t0)
         assert np.all(mesh.get_tet(t0) == [v0, v1, v2, v3])
         assert np.all(mesh.get_tet(t0) == [v0, v1, v2, v3])
+
+    def test_grid(self):
+        grid = mtet.generate_tet_grid([1, 1, 1], style=5)
+        assert isinstance(grid, mtet.MTetMesh)
+        assert grid.get_num_vertices() == 8
+        assert grid.get_num_tets() == 5
+
+        grid = mtet.generate_tet_grid([1, 1, 2], style=5)
+        assert grid.get_num_vertices() == 12
+        assert grid.get_num_tets() == 10 
+
+        grid = mtet.generate_tet_grid([1, 1, 1], style=6)
+        assert grid.get_num_vertices() == 8
+        assert grid.get_num_tets() == 6
+
+        grid = mtet.generate_tet_grid([2, 2, 2], style=6)
+        assert grid.get_num_vertices() == 27
+        assert grid.get_num_tets() == 48
