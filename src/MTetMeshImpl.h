@@ -646,7 +646,7 @@ public:
             bool on_boundary = false;
             do {
                 TetKey curr_key = TetKey(value_of(curr_id));
-                assert(curr_key != invalid_key);
+                assert(curr_key != TetKey::invalid());
                 assert(m_tets.get(curr_key)->vertices[lv0] == v0_id);
                 assert(m_tets.get(curr_key)->vertices[lv1] == v1_id);
 
@@ -656,7 +656,7 @@ public:
                 // opposite to the lv2 vertex.
                 std::tie(next_id, llv0, llv1, llv3, llv2) =
                     get_next_tet_id(curr_id, lv0, lv1, lv3, lv2);
-                if (TetKey(value_of(next_id)) == invalid_key) {
+                if (TetKey(value_of(next_id)) == TetKey::invalid()) {
                     on_boundary = true;
                     break;
                 }
@@ -690,7 +690,7 @@ public:
                 local_indices.push_back(lv3);
                 std::tie(curr_id, lv0, lv1, lv2, lv3) =
                     get_next_tet_id(curr_id, lv0, lv1, lv2, lv3);
-            } while (TetKey(value_of(curr_id) != invalid_key && !is_same_tet(curr_id, init_id)));
+            } while (TetKey(value_of(curr_id)) != TetKey::invalid() && !is_same_tet(curr_id, init_id));
             size_t one_ring_size = old_one_ring.size();
 
             // Split 1-ring tets
@@ -784,16 +784,19 @@ public:
     void par_foreach_vertex(
         const std::function<void(VertexId, std::span<const Scalar, 3>)>& callback) const
     {
-        const size_t max_valid_index = m_vertices.getMaxValidIndex();
+        // Collect all valid vertices first (slot_map iterators are not thread-safe for parallel access)
+        std::vector<std::pair<VertexId, std::array<Scalar, 3>>> vertices;
+        vertices.reserve(m_vertices.size());
+        for (const auto& [key, value] : m_vertices.items()) {
+            vertices.emplace_back(VertexId(key), value.get());
+        }
+
         dr::parallel_for(
-            dr::blocked_range<size_t>(0, max_valid_index, 1),
+            dr::blocked_range<size_t>(0, vertices.size(), 1),
             [&](dr::blocked_range<size_t> range) {
                 for (auto index : range) {
-                    if (m_vertices.isValidIndex(index)) {
-                        VertexMap::const_kv_iterator itr(&m_vertices, index);
-                        const auto& [key, value] = *itr;
-                        callback(VertexId(key), std::span<const Scalar, 3>(value.get().data(), 3));
-                    }
+                    const auto& [id, vertex] = vertices[index];
+                    callback(id, std::span<const Scalar, 3>(vertex.data(), 3));
                 }
             });
     }
@@ -809,17 +812,21 @@ public:
     void par_foreach_tet(
         const std::function<void(TetId, std::span<const VertexId, 4>)>& callback) const
     {
-        const size_t max_valid_index = m_tets.getMaxValidIndex();
+        // Collect all valid tets first (slot_map iterators are not thread-safe for parallel access)
+        std::vector<std::pair<TetId, std::array<VertexId, 4>>> tets;
+        tets.reserve(m_tets.size());
+        for (const auto& [key, value] : m_tets.items()) {
+            std::array<VertexId, 4> vertices;
+            std::copy(std::begin(value.get().vertices), std::end(value.get().vertices), vertices.begin());
+            tets.emplace_back(TetId(key), vertices);
+        }
+
         dr::parallel_for(
-            dr::blocked_range<size_t>(0, max_valid_index, 1),
+            dr::blocked_range<size_t>(0, tets.size(), 1),
             [&](dr::blocked_range<size_t> range) {
                 for (auto index : range) {
-                    if (m_tets.isValidIndex(index)) {
-                        TetMap::const_kv_iterator itr(&m_tets, index);
-                        const auto& [key, value] = *itr;
-                        assert(&value.get() == m_tets.get(key));
-                        callback(TetId(key), std::span<const VertexId, 4>(value.get().vertices, 4));
-                    }
+                    const auto& [id, vertices] = tets[index];
+                    callback(id, std::span<const VertexId, 4>(vertices.data(), 4));
                 }
             });
     }
@@ -868,7 +875,7 @@ public:
         bool on_boundary = false;
         do {
             TetKey curr_key = TetKey(value_of(curr_id));
-            assert(curr_key != invalid_key);
+            assert(curr_key != TetKey::invalid());
 
             TetId next_id;
             uint8_t llv0, llv1, llv2, llv3;
@@ -876,7 +883,7 @@ public:
             // opposite to the lv2 vertex.
             std::tie(next_id, llv0, llv1, llv3, llv2) =
                 get_next_tet_id(curr_id, lv0, lv1, lv3, lv2);
-            if (TetKey(value_of(next_id)) == invalid_key) {
+            if (TetKey(value_of(next_id)) == TetKey::invalid()) {
                 on_boundary = true;
                 break;
             }

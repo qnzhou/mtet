@@ -108,8 +108,8 @@ TEST_CASE("TriangleHash", "[unordered_dense]")
 
 TEST_CASE("invalid_key", "[slotmap]")
 {
-    REQUIRE(mtet::invalid_key == mtet::MTetMeshImpl::VertexKey::invalid());
-    REQUIRE(mtet::invalid_key == mtet::MTetMeshImpl::TetKey::invalid());
+    REQUIRE(static_cast<uint64_t>(mtet::MTetMeshImpl::VertexKey::invalid()) == mtet::invalid_key);
+    REQUIRE(static_cast<uint64_t>(mtet::MTetMeshImpl::TetKey::invalid()) == mtet::invalid_key);
 }
 
 TEST_CASE("tag", "[slotmap]")
