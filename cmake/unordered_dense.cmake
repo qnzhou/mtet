@@ -8,7 +8,7 @@ include(CPM)
 CPMAddPackage(
   NAME unordered_dense
   GITHUB_REPOSITORY martinus/unordered_dense
-  GIT_TAG v4.5.0
+  GIT_TAG v4.8.1
 )
 
 set_target_properties(unordered_dense PROPERTIES SYSTEM ON)

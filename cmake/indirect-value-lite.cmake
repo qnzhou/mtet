@@ -7,7 +7,7 @@ message(STATUS "Third-party (external): creating target 'nonstd::indirect-value-
 include(CPM)
 CPMAddPackage(
     NAME indirect-value-lite
-    GITHUB_REPOSITORY martinmoene/indirect-value-lite
+    GITHUB_REPOSITORY nonstd-lite/indirect-value-lite
     GIT_TAG v0.1.0
 )
 

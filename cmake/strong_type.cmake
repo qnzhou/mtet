@@ -8,7 +8,7 @@ include(CPM)
 CPMAddPackage(
     NAME strong_type
     GITHUB_REPOSITORY rollbear/strong_type
-    GIT_TAG v13
+    GIT_TAG v15
 )
 
 set_target_properties(strong_type PROPERTIES SYSTEM ON)

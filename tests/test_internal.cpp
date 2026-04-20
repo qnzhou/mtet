@@ -2,7 +2,10 @@
 
 #include <MTetMeshImpl.h>
 
+#include <algorithm>
 #include <array>
+#include <mutex>
+#include <vector>
 
 void validate_mesh(const mtet::MTetMeshImpl& mesh)
 {
@@ -108,8 +111,8 @@ TEST_CASE("TriangleHash", "[unordered_dense]")
 
 TEST_CASE("invalid_key", "[slotmap]")
 {
-    REQUIRE(mtet::invalid_key == mtet::MTetMeshImpl::VertexKey::invalid());
-    REQUIRE(mtet::invalid_key == mtet::MTetMeshImpl::TetKey::invalid());
+    REQUIRE(static_cast<uint64_t>(mtet::MTetMeshImpl::VertexKey::invalid()) == mtet::invalid_key);
+    REQUIRE(static_cast<uint64_t>(mtet::MTetMeshImpl::TetKey::invalid()) == mtet::invalid_key);
 }
 
 TEST_CASE("tag", "[slotmap]")
@@ -378,5 +381,98 @@ TEST_CASE("foreach_edge_in_tet", "[mtet]")
         auto tet_id = mesh.get_edge_tet(edge_id);
         REQUIRE(mesh.has_tet(tet_id));
     });
+}
+
+TEST_CASE("par_foreach_vertex", "[mtet][parallel]")
+{
+    mtet::MTetMeshImpl mesh;
+    auto v0 = mesh.add_vertex(0, 0, 0);
+    auto v1 = mesh.add_vertex(1, 0, 0);
+    auto v2 = mesh.add_vertex(0, 1, 0);
+    auto v3 = mesh.add_vertex(0, 0, 1);
+    auto v4 = mesh.add_vertex(1, 1, 1);
+    auto t0 = mesh.add_tet(v0, v1, v2, v3);
+    auto t1 = mesh.add_tet(v4, v3, v2, v1);
+    mesh.initialize_connectivity();
+
+    // Collect results from sequential foreach
+    std::vector<std::pair<mtet::VertexId, std::array<mtet::Scalar, 3>>> seq_vertices;
+    mesh.seq_foreach_vertex([&](mtet::VertexId id, std::span<const mtet::Scalar, 3> vertex) {
+        seq_vertices.emplace_back(id, std::array<mtet::Scalar, 3>{vertex[0], vertex[1], vertex[2]});
+    });
+
+    // Collect results from parallel foreach
+    // Note: We use a mutex to ensure thread-safe insertion
+    std::mutex mtx;
+    std::vector<std::pair<mtet::VertexId, std::array<mtet::Scalar, 3>>> par_vertices;
+    mesh.par_foreach_vertex([&](mtet::VertexId id, std::span<const mtet::Scalar, 3> vertex) {
+        std::lock_guard<std::mutex> lock(mtx);
+        par_vertices.emplace_back(id, std::array<mtet::Scalar, 3>{vertex[0], vertex[1], vertex[2]});
+    });
+
+    // Verify both methods visit the same vertices
+    REQUIRE(seq_vertices.size() == par_vertices.size());
+    REQUIRE(seq_vertices.size() == 5);
+
+    // Sort both vectors by VertexId for comparison
+    auto comparator = [](const auto& a, const auto& b) {
+        return value_of(a.first) < value_of(b.first);
+    };
+    std::sort(seq_vertices.begin(), seq_vertices.end(), comparator);
+    std::sort(par_vertices.begin(), par_vertices.end(), comparator);
+
+    for (size_t i = 0; i < seq_vertices.size(); i++) {
+        REQUIRE(seq_vertices[i].first == par_vertices[i].first);
+        REQUIRE(seq_vertices[i].second[0] == par_vertices[i].second[0]);
+        REQUIRE(seq_vertices[i].second[1] == par_vertices[i].second[1]);
+        REQUIRE(seq_vertices[i].second[2] == par_vertices[i].second[2]);
+    }
+}
+
+TEST_CASE("par_foreach_tet", "[mtet][parallel]")
+{
+    mtet::MTetMeshImpl mesh;
+    auto v0 = mesh.add_vertex(0, 0, 0);
+    auto v1 = mesh.add_vertex(1, 0, 0);
+    auto v2 = mesh.add_vertex(0, 1, 0);
+    auto v3 = mesh.add_vertex(0, 0, 1);
+    auto v4 = mesh.add_vertex(1, 1, 1);
+    auto t0 = mesh.add_tet(v0, v1, v2, v3);
+    auto t1 = mesh.add_tet(v4, v3, v2, v1);
+    mesh.initialize_connectivity();
+
+    // Collect results from sequential foreach
+    std::vector<std::pair<mtet::TetId, std::array<mtet::VertexId, 4>>> seq_tets;
+    mesh.seq_foreach_tet([&](mtet::TetId id, std::span<const mtet::VertexId, 4> vertices) {
+        seq_tets.emplace_back(id, std::array<mtet::VertexId, 4>{vertices[0], vertices[1], vertices[2], vertices[3]});
+    });
+
+    // Collect results from parallel foreach
+    // Note: We use a mutex to ensure thread-safe insertion
+    std::mutex mtx;
+    std::vector<std::pair<mtet::TetId, std::array<mtet::VertexId, 4>>> par_tets;
+    mesh.par_foreach_tet([&](mtet::TetId id, std::span<const mtet::VertexId, 4> vertices) {
+        std::lock_guard<std::mutex> lock(mtx);
+        par_tets.emplace_back(id, std::array<mtet::VertexId, 4>{vertices[0], vertices[1], vertices[2], vertices[3]});
+    });
+
+    // Verify both methods visit the same tets
+    REQUIRE(seq_tets.size() == par_tets.size());
+    REQUIRE(seq_tets.size() == 2);
+
+    // Sort both vectors by TetId for comparison
+    auto comparator = [](const auto& a, const auto& b) {
+        return value_of(a.first) < value_of(b.first);
+    };
+    std::sort(seq_tets.begin(), seq_tets.end(), comparator);
+    std::sort(par_tets.begin(), par_tets.end(), comparator);
+
+    for (size_t i = 0; i < seq_tets.size(); i++) {
+        REQUIRE(seq_tets[i].first == par_tets[i].first);
+        REQUIRE(seq_tets[i].second[0] == par_tets[i].second[0]);
+        REQUIRE(seq_tets[i].second[1] == par_tets[i].second[1]);
+        REQUIRE(seq_tets[i].second[2] == par_tets[i].second[2]);
+        REQUIRE(seq_tets[i].second[3] == par_tets[i].second[3]);
+    }
 }
 

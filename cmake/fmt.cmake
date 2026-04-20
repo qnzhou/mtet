@@ -8,7 +8,7 @@ include(CPM)
 CPMAddPackage(
   NAME fmt
   GITHUB_REPOSITORY fmtlib/fmt
-  GIT_TAG 10.2.1
+  GIT_TAG 12.1.0
 )
 
 set_target_properties(fmt PROPERTIES
