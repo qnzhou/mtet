@@ -1,10 +1,12 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <limits>
 #include <span>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include <SmallVector.h>
