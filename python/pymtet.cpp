@@ -146,7 +146,14 @@ NB_MODULE(pymtet, m)
             Vertices vertices(v_data.data(), {num_vertices, 3}, owner);
             Tets tets(t_data.data(), {num_tets, 4}, owner);
             return std::make_tuple(std::move(vertices), std::move(tets));
-        });
+        },
+        R"(Export the mesh as vertex and tetrahedron arrays.
+
+:return: A tuple ``(vertices, tets)``. ``vertices`` is an array of shape
+    ``(n_vertices, 3)`` containing vertex coordinates. ``tets`` is an array
+    of shape ``(n_tets, 4)`` where row ``i`` holds the 4 vertex indices
+    (into ``vertices``) of tetrahedron ``i``.
+:rtype: tuple[numpy.ndarray, numpy.ndarray])");
 
     m.def("load_mesh", &mtet::load_mesh);
     m.def("save_mesh", nb::overload_cast<std::string, const mtet::MTetMesh&>(&mtet::save_mesh));
@@ -187,10 +194,17 @@ NB_MODULE(pymtet, m)
         "style"_a = 5,
         R"(Generate a tetrahedral grid with the specified resolution and bounding box.
 
-@param resolution The number of divisions along each axis (x, y, z).
-@param bbox_min The minimum coordinates of the bounding box.
-@param bbox_max The maximum coordinates of the bounding box.
-@param style The style of the tetrahedral mesh (5 or 6).
-
-@return A tetrahedral mesh object.)");
+:param resolution: Number of divisions along the x, y and z axes.
+:type resolution: tuple[int, int, int]
+:param bbox_min: Minimum corner of the bounding box. Defaults to ``(0, 0, 0)``.
+:type bbox_min: tuple[float, float, float]
+:param bbox_max: Maximum corner of the bounding box. Defaults to ``(1, 1, 1)``.
+:type bbox_max: tuple[float, float, float]
+:param style: Tetrahedralization style: ``5`` splits each grid cell into 5
+    tets (``TET5``), ``6`` splits each cell into 6 tets (``TET6``). Defaults
+    to ``5``.
+:type style: int
+:return: The generated tetrahedral grid mesh.
+:rtype: MTetMesh
+:raises ValueError: If ``style`` is not ``5`` or ``6``.)");
 }
