@@ -14,6 +14,7 @@
 #include <ankerl/unordered_dense.h>
 
 #include <fmt/core.h>
+#include <cstdint>
 #include <span>
 
 namespace nb = nanobind;
@@ -108,7 +109,7 @@ NB_MODULE(pymtet, m)
         .def("foreach_tet_around_edge", &mtet::MTetMesh::foreach_tet_around_edge)
         .def("export", [](mtet::MTetMesh& self) {
             using Vertices = nb::ndarray<mtet::Scalar, nb::numpy, nb::shape<-1, 3>, nb::c_contig>;
-            using Tets = nb::ndarray<int, nb::numpy, nb::shape<-1, 4>, nb::c_contig>;
+            using Tets = nb::ndarray<int64_t, nb::numpy, nb::shape<-1, 4>, nb::c_contig>;
 
             size_t num_vertices = self.get_num_vertices();
             size_t num_tets = self.get_num_tets();
@@ -119,12 +120,12 @@ NB_MODULE(pymtet, m)
 
             struct ExportData {
                 std::vector<mtet::Scalar> v_data;
-                std::vector<int> t_data;
+                std::vector<int64_t> t_data;
             };
             auto* export_data = new ExportData();
             nb::capsule owner(export_data, [](void* p) noexcept { delete (ExportData*)p; });
             std::vector<mtet::Scalar>& v_data = export_data->v_data;
-            std::vector<int>& t_data = export_data->t_data;
+            std::vector<int64_t>& t_data = export_data->t_data;
             v_data.reserve(num_vertices * 3);
             t_data.reserve(num_tets * 4);
             self.seq_foreach_vertex([&](mtet::VertexId vid, std::span<const mtet::Scalar, 3> data) {
