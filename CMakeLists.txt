@@ -93,7 +93,7 @@ if (MTET_BUILD_PYTHON_BINDING)
     set(PY_SRC_FILE "${PROJECT_SOURCE_DIR}/python/pymtet.cpp")
     nanobind_add_module(pymtet NB_STATIC ${PY_SRC_FILE})
     target_compile_features(pymtet PRIVATE cxx_std_20)
-    target_link_libraries(pymtet PUBLIC mtet::mtet fmt::fmt)
+    target_link_libraries(pymtet PUBLIC mtet::mtet fmt::fmt unordered_dense::unordered_dense)
     install(TARGETS pymtet nanothread LIBRARY
         COMPONENT MTet_Python_Runtime
         DESTINATION ${SKBUILD_PLATLIB_DIR}/mtet)

@@ -3,12 +3,15 @@
 #include <mtet/mtet.h>
 
 #include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
 #include <nanobind/operators.h>
 #include <nanobind/stl/array.h>
 #include <nanobind/stl/function.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
+
+#include <ankerl/unordered_dense.h>
 
 #include <fmt/core.h>
 #include <span>
@@ -102,7 +105,47 @@ NB_MODULE(pymtet, m)
                 self.seq_foreach_tet(
                     [&](mtet::TetId tid, std::span<const mtet::VertexId, 4>) { f(tid); });
             })
-        .def("foreach_tet_around_edge", &mtet::MTetMesh::foreach_tet_around_edge);
+        .def("foreach_tet_around_edge", &mtet::MTetMesh::foreach_tet_around_edge)
+        .def("export", [](mtet::MTetMesh& self) {
+            using Vertices = nb::ndarray<mtet::Scalar, nb::numpy, nb::shape<-1, 3>, nb::c_contig>;
+            using Tets = nb::ndarray<int, nb::numpy, nb::shape<-1, 4>, nb::c_contig>;
+
+            size_t num_vertices = self.get_num_vertices();
+            size_t num_tets = self.get_num_tets();
+
+            using IndexMap = ankerl::unordered_dense::map<uint64_t, size_t>;
+            IndexMap vertex_tag_map;
+            vertex_tag_map.reserve(num_vertices);
+
+            struct ExportData {
+                std::vector<mtet::Scalar> v_data;
+                std::vector<int> t_data;
+            };
+            auto* export_data = new ExportData();
+            nb::capsule owner(export_data, [](void* p) noexcept { delete (ExportData*)p; });
+            std::vector<mtet::Scalar>& v_data = export_data->v_data;
+            std::vector<int>& t_data = export_data->t_data;
+            v_data.reserve(num_vertices * 3);
+            t_data.reserve(num_tets * 4);
+            self.seq_foreach_vertex([&](mtet::VertexId vid, std::span<const mtet::Scalar, 3> data) {
+                size_t vertex_tag = vertex_tag_map.size();
+                vertex_tag_map[value_of(vid)] = vertex_tag;
+
+                v_data.push_back(data[0]);
+                v_data.push_back(data[1]);
+                v_data.push_back(data[2]);
+            });
+            self.seq_foreach_tet([&](mtet::TetId, std::span<const mtet::VertexId, 4> data) {
+                t_data.push_back(vertex_tag_map[value_of(data[0])]);
+                t_data.push_back(vertex_tag_map[value_of(data[1])]);
+                t_data.push_back(vertex_tag_map[value_of(data[2])]);
+                t_data.push_back(vertex_tag_map[value_of(data[3])]);
+            });
+
+            Vertices vertices(v_data.data(), {num_vertices, 3}, owner);
+            Tets tets(t_data.data(), {num_tets, 4}, owner);
+            return std::make_tuple(std::move(vertices), std::move(tets));
+        });
 
     m.def("load_mesh", &mtet::load_mesh);
     m.def("save_mesh", nb::overload_cast<std::string, const mtet::MTetMesh&>(&mtet::save_mesh));
@@ -148,5 +191,5 @@ NB_MODULE(pymtet, m)
 @param bbox_max The maximum coordinates of the bounding box.
 @param style The style of the tetrahedral mesh (5 or 6).
 
-@return A tetrahedral mesh object.)" );
+@return A tetrahedral mesh object.)");
 }

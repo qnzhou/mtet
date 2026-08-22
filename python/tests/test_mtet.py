@@ -39,3 +39,14 @@ class TestMTet:
         grid = mtet.generate_tet_grid([2, 2, 2], style=6)
         assert grid.get_num_vertices() == 27
         assert grid.get_num_tets() == 48
+
+    def test_export(self):
+        grid = mtet.generate_tet_grid([2, 2, 2], style=6)
+        vertices, tets = grid.export()
+
+        assert vertices.shape == (grid.get_num_vertices(), 3)
+        assert tets.shape == (grid.get_num_tets(), 4)
+        assert not np.all(vertices == 0)
+        assert vertices.min() >= 0.0 and vertices.max() <= 1.0
+        assert tets.min() == 0
+        assert tets.max() == grid.get_num_vertices() - 1
