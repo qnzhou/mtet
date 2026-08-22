@@ -176,8 +176,12 @@ MTetMesh load_mesh(std::string filename)
 
     MTetMesh mesh;
     for (const auto& node_block : spec.nodes.entity_blocks) {
-        assert(node_block.entity_dim == 3);
-        assert(node_block.data.size() % 3 == 0);
+        if (node_block.entity_dim != 3) {
+            throw std::runtime_error("load_mesh: expected node blocks with entity_dim == 3");
+        }
+        if (node_block.data.size() % 3 != 0) {
+            throw std::runtime_error("load_mesh: malformed node block (data size not a multiple of 3)");
+        }
         for (size_t i = 0; i < node_block.data.size(); i += 3) {
             auto vid =
                 mesh.add_vertex(node_block.data[i], node_block.data[i + 1], node_block.data[i + 2]);
@@ -186,15 +190,31 @@ MTetMesh load_mesh(std::string filename)
     }
 
     for (const auto& element_block : spec.elements.entity_blocks) {
-        assert(element_block.entity_dim == 3);
-        assert(element_block.element_type == 4);
-        assert(element_block.data.size() % 5 == 0);
+        if (element_block.entity_dim != 3 || element_block.element_type != 4) {
+            throw std::runtime_error(
+                "load_mesh: expected tetrahedral element blocks (entity_dim == 3, "
+                "element_type == 4)");
+        }
+        if (element_block.data.size() % 5 != 0) {
+            throw std::runtime_error(
+                "load_mesh: malformed element block (data size not a multiple of 5)");
+        }
         for (size_t i = 0; i < element_block.data.size(); i += 5) {
+            size_t tags[4] = {
+                element_block.data[i + 1],
+                element_block.data[i + 2],
+                element_block.data[i + 3],
+                element_block.data[i + 4]};
+            for (size_t tag : tags) {
+                if (tag == 0 || tag > vertex_ids.size()) {
+                    throw std::runtime_error("load_mesh: element references an invalid node tag");
+                }
+            }
             mesh.add_tet(
-                vertex_ids[element_block.data[i + 1] - 1],
-                vertex_ids[element_block.data[i + 2] - 1],
-                vertex_ids[element_block.data[i + 3] - 1],
-                vertex_ids[element_block.data[i + 4] - 1]);
+                vertex_ids[tags[0] - 1],
+                vertex_ids[tags[1] - 1],
+                vertex_ids[tags[2] - 1],
+                vertex_ids[tags[3] - 1]);
         }
     }
 

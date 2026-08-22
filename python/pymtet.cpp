@@ -94,7 +94,7 @@ NB_MODULE(pymtet, m)
             R"(Build tet-tet adjacency information.
 
 Must be called once after the mesh has been constructed and before using
-connectivity-dependent queries such as :meth:`get_mirror`, :meth:`get_edge_tet` or
+connectivity-dependent queries such as :meth:`get_mirror` or
 :meth:`foreach_tet_around_edge`.)")
         .def(
             "has_vertex",
@@ -161,7 +161,7 @@ connectivity-dependent queries such as :meth:`get_mirror`, :meth:`get_edge_tet` 
     edge numbering convention.
 :return: The id of the requested edge.
 :rtype: EdgeId
-:raises RuntimeError: If ``tet_id`` does not exist.)")
+:raises RuntimeError: If ``tet_id`` does not exist or ``local_index`` is not in ``[0, 6)``.)")
         .def(
             "print",
             [](mtet::MTetMesh& self, mtet::TetId tet_id) {
@@ -193,8 +193,6 @@ connectivity-dependent queries such as :meth:`get_mirror`, :meth:`get_edge_tet` 
             &mtet::MTetMesh::get_edge_tet,
             "edge_id"_a,
             R"(Get a tetrahedron incident to the given edge.
-
-Requires :meth:`initialize_connectivity` to have been called.
 
 :param edge_id: Id of the edge to query.
 :return: The id of a tetrahedron containing the edge.
