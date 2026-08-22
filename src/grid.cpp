@@ -12,7 +12,9 @@ MTetMesh generate_tet_grid(
     const std::array<float, 3>& bbox_max,
     GridStyle style)
 {
-    assert(resolution[0] > 0 && resolution[1] > 0 && resolution[2] > 0);
+    if (resolution[0] == 0 || resolution[1] == 0 || resolution[2] == 0) {
+        throw std::invalid_argument("generate_tet_grid: resolution must be positive along each axis");
+    }
     const size_t N0 = resolution[0] + 1;
     const size_t N1 = resolution[1] + 1;
     const size_t N2 = resolution[2] + 1;
@@ -103,6 +105,7 @@ MTetMesh generate_tet_grid(
     for (auto& t : tets) {
         mesh.add_tet(vertex_ids[t[0]], vertex_ids[t[1]], vertex_ids[t[2]], vertex_ids[t[3]]);
     }
+    mesh.initialize_connectivity();
     return mesh;
 }
 

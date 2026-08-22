@@ -471,6 +471,9 @@ public:
         if (ptr == nullptr) {
             throw std::runtime_error("Tet not found");
         }
+        if (local_index >= 6) {
+            throw std::runtime_error("Invalid local index (must be in [0, 5])");
+        }
 
         set_edge_index(tet_key, local_index);
         return EdgeId(tet_key);
