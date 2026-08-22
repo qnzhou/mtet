@@ -391,7 +391,7 @@ Requires :meth:`initialize_connectivity` to have been called.
 :param mesh: Mesh to save.)");
     m.def(
         "save_mesh",
-        nb::overload_cast<std::string, const mtet::MTetMesh&, std::span<mtet::TetId>>(
+        nb::overload_cast<std::string, const mtet::MTetMesh&, const std::vector<mtet::TetId>&>(
             &mtet::save_mesh),
         "filename"_a,
         "mesh"_a,

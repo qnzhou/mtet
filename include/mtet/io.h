@@ -2,12 +2,13 @@
 
 #include <span>
 #include <string>
+#include <vector>
 #include "mtet.h"
 
 namespace mtet {
 
 void save_mesh(std::string filename, const MTetMesh& mesh);
-void save_mesh(std::string filename, const MTetMesh& mesh, std::span<TetId> active_tets);
+void save_mesh(std::string filename, const MTetMesh& mesh, const std::vector<TetId>& active_tets);
 void save_mesh(
     std::string filename,
     const MTetMesh& mesh,

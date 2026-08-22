@@ -95,7 +95,7 @@ void save_mesh(std::string filename, const MTetMesh& mesh)
     mshio::save_msh(filename, spec);
 }
 
-void save_mesh(std::string filename, const MTetMesh& mesh, std::span<TetId> active_tets)
+void save_mesh(std::string filename, const MTetMesh& mesh, const std::vector<TetId>& active_tets)
 {
     mshio::MshSpec spec;
     spec.mesh_format.file_type = 1; // binary
